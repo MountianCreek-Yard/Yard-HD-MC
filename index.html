@@ -99,6 +99,8 @@ tbody tr:hover{background:#fff8cc}
 .zoom{display:flex;gap:6px;align-items:center;margin:0 0 10px;flex-wrap:wrap}
 .zoom button{padding:5px 12px}
 .leg{margin:10px 0}
+.whobtn{background:#2b2b2b;color:#FFD400;border:1.5px solid #FFD400;border-radius:999px;padding:4px 14px;font-weight:600}
+.logt td{padding:6px 8px;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -107,13 +109,14 @@ tbody tr:hover{background:#fff8cc}
 <h1>Yard Manager</h1>
 <p class="sub">5300 Mountain Creek Pkwy, Dallas, TX 75236. Every trailer from gate to dock to departure.</p>
 <div id="sync"></div>
+<button class="whobtn" id="who"></button>
 </div></header>
 <main>
 <div class="stats" id="stats"></div>
 
 <div class="panel">
 <h2>Yard map</h2>
-<div class="zoom"><button id="zout">&minus;</button><button id="zin">+</button><button id="zfit">Fit to screen</button><button id="z1">100%</button><span class="note" id="zl"></span></div>
+<div class="zoom"><button id="zout">&minus;</button><button id="zin">+</button><button id="zfit">Fit to screen</button><button id="z1">100%</button><input id="jump" placeholder="Jump to D-89 or Y-14" style="width:180px"><button id="jgo">Go</button><span class="note" id="zl"></span></div>
 <div class="wrap" id="mapwrap"><svg id="map" role="img" aria-label="Yard map"></svg></div>
 <div class="leg" id="leg"></div>
 <div id="sel"></div>
@@ -123,7 +126,10 @@ tbody tr:hover{background:#fff8cc}
 <label>Doors, south wall<input id="cds" type="number" min="0" max="200"></label>
 <label>Yard spots, north<input id="csn" type="number" min="0" max="120"></label>
 <label>Yard spots, south<input id="css" type="number" min="0" max="120"></label>
+<label>Slots per row (0 = one long row)<input id="crl" type="number" min="0" max="200"></label>
 <button id="capply">Apply layout</button></div>
+<div class="lay" id="lockrow"><span id="lockst" class="note" style="flex:1 1 100%;margin:0"></span>
+<input id="lpw" type="password" placeholder="Password" autocomplete="off"><input id="lpw2" type="password" placeholder="Confirm password" autocomplete="off"><span id="lockbtns" style="display:contents"></span></div>
 <div class="note">Schematic only, not to scale. Doors are named D-01, D-02… from north wall to south wall; yard spots Y-01… the same way. Match these to your real door and spot numbers.</div>
 </details></div>
 
@@ -158,10 +164,14 @@ tbody tr:hover{background:#fff8cc}
 <button class="p" id="xl">Export to Excel</button>
 </div>
 <div class="wrap"><table>
-<thead><tr><th>Trailer</th><th>Carrier</th><th>Dir.</th><th>Yard</th><th>Door</th><th>Status</th><th>Check-in</th><th>Completed</th><th>Check-out</th><th>Delivery</th><th>Actions</th></tr></thead>
+<thead><tr><th>Trailer</th><th>Carrier</th><th>Dir.</th><th>Yard</th><th>Door</th><th>Status</th><th>Check-in</th><th>Completed</th><th>Check-out</th><th>Delivery</th><th>Updated by</th><th>Actions</th></tr></thead>
 <tbody id="rows"></tbody>
 </table></div>
 <div class="note">Any trailer on site more than 24 hours after check-in turns red. Check-in, completion and check-out times are stamped when you press the action button. Data is saved in this browser only, so use Export to Excel to keep a copy.</div>
+</div>
+<div class="panel">
+<h2>Recent activity</h2>
+<div class="wrap"><table class="logt" style="min-width:520px"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logb"></tbody></table></div>
 </div>
 </main>
 <script src="config.js"></script>
@@ -175,9 +185,33 @@ function $(i){return document.getElementById(i)}
 function load(){try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}}
 var DB=null,shadow={},q=Promise.resolve();
 function setSync(t,bad){var e=$("sync");if(e){e.textContent=t;e.className=bad?"bad":""}}
+var me=(function(){try{return localStorage.getItem("yardmgr.me")||""}catch(e){return""}})();
+var logs=(function(){try{return JSON.parse(localStorage.getItem("yardmgr.log")||"[]")}catch(e){return[]}})();
+function ensureMe(){if(me)return;var n=prompt("Enter your name so every change shows who made it:");me=(n||"").trim()||"Unknown";try{localStorage.setItem("yardmgr.me",me)}catch(e){}renderWho()}
+function renderWho(){var b=$("who");if(b)b.textContent=me?"Signed in as "+me+" (change)":"Set your name"}
+function core(i){var c=Object.assign({},i);delete c.updBy;delete c.updAt;delete c.createdBy;delete c.createdAt;return JSON.stringify(c)}
+function describe(i,old){
+ if(!old)return"Added "+i.trailer+" ("+i.carrier+")";
+ var o=JSON.parse(old);
+ if(o.status!==i.status)return i.trailer+": "+o.status+" to "+i.status+(i.status==="At door"||i.status==="Loading/Unloading"?" at "+(i.door||"?"):i.status==="In yard"?" at "+(i.yard||"?"):"");
+ if(o.yard!==i.yard||o.door!==i.door)return i.trailer+": moved to "+(i.door||i.yard||"?");
+ return"Edited "+i.trailer}
+function addLog(text){
+ var r={at:new Date().toISOString(),by:me||"Unknown",text:text};
+ if(DB){DB.doc("log/l"+Date.now()+Math.floor(Math.random()*9000+1000)).set(r).catch(function(){})}
+ else{logs.unshift(r);logs=logs.slice(0,200);try{localStorage.setItem("yardmgr.log",JSON.stringify(logs))}catch(e){}}}
+function renderLog(){
+ var el=$("logb");if(!el)return;
+ el.innerHTML=logs.length?logs.slice(0,40).map(function(l){return"<tr><td>"+fmt(l.at)+"</td><td>"+esc(l.by)+"</td><td>"+esc(l.text)+"</td></tr>"}).join(""):'<tr><td colspan="3" class="empty">No activity yet.</td></tr>'}
 function persist(){
- if(!DB){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}return}
- var cur={},ops=[];items.forEach(function(i){cur[i.id]=JSON.stringify(i)});
+ ensureMe();
+ var ts=new Date().toISOString(),cur={},ops=[],notes=[];
+ items.forEach(function(i){var old=shadow[i.id];
+  if(!old||core(i)!==core(JSON.parse(old))){i.updBy=me;i.updAt=ts;if(!i.createdBy){i.createdBy=me;i.createdAt=ts}notes.push(describe(i,old))}
+  cur[i.id]=JSON.stringify(i)});
+ Object.keys(shadow).forEach(function(id){if(!cur[id])notes.push("Deleted "+JSON.parse(shadow[id]).trailer)});
+ notes.forEach(addLog);
+ if(!DB){shadow=cur;try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}renderLog();return}
  items.forEach(function(i){if(shadow[i.id]!==cur[i.id])ops.push(function(){return DB.doc("trailers/"+i.id).set(JSON.parse(cur[i.id]))})});
  Object.keys(shadow).forEach(function(id){if(!cur[id])ops.push(function(){return DB.doc("trailers/"+id).delete()})});
  shadow=cur;
@@ -207,7 +241,7 @@ function renderTable(){
  var dr=items.filter(function(i){return i.status==="At door"||i.status==="Loading/Unloading"}).length;
  var yd=items.filter(function(i){return i.status==="In yard"}).length;
  $("stats").innerHTML=[["On site",on],["In yard",yd],["At doors",dr],["Completed",items.filter(function(i){return i.status==="Completed"}).length],["Over 24h",items.filter(over).length],["Yard check",checkedToday()?"Done":"Due"]].map(function(s){return'<div class="stat'+(s[0]==="Over 24h"&&s[1]>0?" red":"")+(s[0]==="Yard check"&&s[1]==="Done"?" ok":"")+'"><b>'+s[1]+"</b><span>"+s[0]+"</span></div>"}).join("");
- if(!list.length){$("rows").innerHTML='<tr><td colspan="11" class="empty">'+(items.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
+ if(!list.length){$("rows").innerHTML='<tr><td colspan="12" class="empty">'+(items.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
  $("rows").innerHTML=list.map(function(i){
   var b="";
   if(i.status==="Scheduled")b+='<button data-a="in" data-id="'+i.id+'">Check in</button>';
@@ -217,7 +251,7 @@ function renderTable(){
   if(i.status==="Completed")b+='<button data-a="out" data-id="'+i.id+'">Check out</button>';
   b+='<button data-a="edit" data-id="'+i.id+'">Edit</button><button data-a="del" data-id="'+i.id+'">Delete</button>';
   return"<tr><td class=loc>"+esc(i.trailer)+"</td><td>"+esc(i.carrier)+"</td><td>"+i.dir+'</td><td class=loc>'+esc(i.yard||"—")+'</td><td class=loc>'+esc(i.door||"—")+
-  '</td><td>'+tagH(i)+"</td><td>"+fmt(i.checkIn)+"</td><td>"+fmt(i.completed)+"</td><td>"+fmt(i.checkOut)+"</td><td>"+fmtDate(i.deliv)+'</td><td><div class="act">'+b+"</div></td></tr>"}).join("");
+  '</td><td>'+tagH(i)+"</td><td>"+fmt(i.checkIn)+"</td><td>"+fmt(i.completed)+"</td><td>"+fmt(i.checkOut)+"</td><td>"+fmtDate(i.deliv)+'</td><td>'+(i.updBy?esc(i.updBy)+'<div class="note" style="margin:0">'+fmt(i.updAt)+'</div>':"-")+'</td><td><div class="act">'+b+"</div></td></tr>"}).join("");
 }
 function clearForm(){editId=null;["trailer","carrier","yard","door","deliv"].forEach(function(k){$(k).value=""});$("dir").value="Inbound";$("status").value="Scheduled";$("save").textContent="Add trailer";$("cancel").hidden=true}
 $("save").onclick=function(){
@@ -243,8 +277,8 @@ $("rows").onclick=function(e){
  persist();render()};
 function toRows(){
  function dt(t){return t?new Date(t).toLocaleString():""}
- var head=["Trailer / Load #","Carrier","Direction","Yard Location","Door Location","Status","Check-in Time","Completion Time","Check-out Time","Delivery Date"];
- return [head].concat(items.map(function(i){return[i.trailer,i.carrier,i.dir,i.yard||"",i.door||"",i.status,dt(i.checkIn),dt(i.completed),dt(i.checkOut),i.deliv||""]}));
+ var head=["Trailer / Load #","Carrier","Direction","Yard Location","Door Location","Status","Check-in Time","Completion Time","Check-out Time","Delivery Date","Added By","Added At","Last Updated By","Last Updated At"];
+ return [head].concat(items.map(function(i){return[i.trailer,i.carrier,i.dir,i.yard||"",i.door||"",i.status,dt(i.checkIn),dt(i.completed),dt(i.checkOut),i.deliv||"",i.createdBy||"",dt(i.createdAt),i.updBy||"",dt(i.updAt)]}));
 }
 $("xl").onclick=async function(){
  if(!items.length){alert("Add at least one trailer before exporting.");return}
@@ -252,7 +286,7 @@ $("xl").onclick=async function(){
  try{dl=await claude.use("downloads")}catch(e){}
  if(dl&&window.XLSX){
   var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[16,18,11,14,14,18,20,20,20,14].map(function(w){return{wch:w}});
+  ws["!cols"]=[16,18,11,14,14,18,20,20,20,14,14,20,16,20].map(function(w){return{wch:w}});
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Yard");
   if(checks.length){var cr=[["Check Date","Checked By","Location","Trailer","Carrier","Result","Note"]];
    checks.forEach(function(c){c.lines.forEach(function(l){cr.push([new Date(c.at).toLocaleString(),c.by,l.loc,l.trailer,l.carrier,RL[l.r||""],l.note||""])})});
@@ -273,34 +307,45 @@ function doorIds(){return ids("D",cfg.dn,cfg.ds)}
 function spotIds(){return ids("Y",cfg.sn,cfg.ss)}
 function occ(){var d={},y={};items.forEach(function(i){if(i.status==="At door"||i.status==="Loading/Unloading"){if(i.door)d[i.door]=i}else if(i.status==="In yard"&&i.yard)y[i.yard]=i});return{d:d,y:y}}
 function lists(){$("dly").innerHTML=spotIds().map(function(x){return'<option value="'+x+'">'}).join("");$("dld").innerHTML=doorIds().map(function(x){return'<option value="'+x+'">'}).join("")}
-var zoom=1;
-function mapW(){return Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,10)*30+20}
+var zoom=1,zoomAuto=true;
+function geom(){var mx=Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,1),per=Math.max(1,cfg.rl>0?Math.min(cfg.rl,mx):mx);return{per:per,W:28+per*36+Math.floor((per-1)/5)*8}}
 function drawMap(){
- var o=occ(),dI=doorIds(),sI=spotIds(),cw=30,per=Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,10),W=per*cw+20,y=6,out="";
+ var g=geom(),per=g.per,W=g.W,cw=36,o=occ(),dI=doorIds(),sI=spotIds(),y=8,out="",wrap=$("mapwrap");
+ if(zoomAuto&&wrap.clientWidth>0)zoom=Math.min(1,(wrap.clientWidth-18)/W);
  function slot(t,id,x,yy,w,h,it){
   var fill=it?(over(it)?RED:"var("+COLORS[it.status]+")"):"#fff";
-  var st=(sel&&sel.id===id)?' stroke="#111" stroke-width="3"':(it?' stroke="rgba(0,0,0,.35)" stroke-width="1"':' stroke="#bdbdb6" stroke-width="1"');
-  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="4" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+h/2+(it?-1:3))+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+(it?"#fff":"#777")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+9)+'" text-anchor="middle" font-size="8" fill="#fff">'+esc(String(it.trailer).slice(-5))+'</text>':"")+'</g>'}
+  var st=(sel&&sel.id===id)?' stroke="#111" stroke-width="3"':(it?' stroke="rgba(0,0,0,.3)" stroke-width="1"':' stroke="#cfcfc8" stroke-width="1"');
+  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="5" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+(it?h/2-2:h/2+4))+'" text-anchor="middle" font-size="'+(id.length>4?8.5:10)+'" font-weight="700" fill="'+(it?"#fff":"#8a8a84")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+11)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">'+esc(String(it.trailer).slice(-6))+'</text>':"")+'</g>'}
  function place(list,t,w,h,map){
-  var rows=Math.ceil(list.length/per);
-  for(var i=0;i<list.length;i++){var r=Math.floor(i/per),c=i%per,n=Math.min(per,list.length-r*per);
-   out+=slot(t,list[i],10+(per-n)*cw/2+c*cw+(cw-w)/2,y+r*(h+4),w,h,map[list[i]])}
-  y+=rows*(h+4)}
- function label(txt){out+='<text x="12" y="'+(y+10)+'" font-size="11" font-weight="700" letter-spacing="1.2" fill="#666">'+txt+'</text>';y+=16}
- function rng(l,n){return n?l[0]+" TO "+l[n-1]:""}
+  var rows=Math.ceil(list.length/per),keep=out;out="";
+  for(var i=0;i<list.length;i++){var r=Math.floor(i/per),c=i%per,n=Math.min(per,list.length-r*per),off=(W-28-(n*cw+Math.floor((n-1)/5)*8))/2;
+   out+=slot(t,list[i],14+off+c*cw+Math.floor(c/5)*8,y+r*(h+6),w,h,map[list[i]])}
+  var blk=out,bh=rows*(h+6)+2;
+  out=keep+'<rect x="6" y="'+(y-4)+'" width="'+(W-12)+'" height="'+bh+'" rx="8" fill="#f1f1ec"/>'+blk;
+  y+=bh+6}
+ function label(txt,list,map){var n=list.filter(function(k){return map[k]}).length;
+  out+='<text x="8" y="'+(y+11)+'" font-size="12" font-weight="700" letter-spacing="1" fill="#444">'+txt+' <tspan fill="#888" font-weight="600">   '+n+' of '+list.length+' in use</tspan></text>';y+=20}
+ function rng(l){return l[0]+" TO "+l[l.length-1]}
  var dN=dI.slice(0,cfg.dn),dS=dI.slice(cfg.dn),sN=sI.slice(0,cfg.sn),sS=sI.slice(cfg.sn);
- if(sN.length){label("NORTH YARD  "+rng(sN,sN.length));place(sN,"y",26,46,o.y);y+=8}
- if(dN.length){label("NORTH DOORS  "+rng(dN,dN.length));place(dN,"d",26,26,o.d);y+=4}
- out+='<rect x="10" y="'+y+'" width="'+(W-20)+'" height="76" rx="6" fill="#1a1a1a"/><rect x="10" y="'+y+'" width="'+(W-20)+'" height="5" fill="#FFD400"/><text x="30" y="'+(y+40)+'" font-size="20" font-weight="800" letter-spacing="5" fill="#FFD400">WAREHOUSE</text><text x="30" y="'+(y+60)+'" font-size="11" fill="#cfcfcf">5300 Mountain Creek Pkwy</text>';
+ if(sN.length){label("NORTH YARD  "+rng(sN),sN,o.y);place(sN,"y",32,56,o.y);y+=6}
+ if(dN.length){label("NORTH DOORS  "+rng(dN),dN,o.d);place(dN,"d",32,32,o.d);y+=4}
+ out+='<rect x="6" y="'+y+'" width="'+(W-12)+'" height="70" rx="8" fill="#1a1a1a"/><rect x="6" y="'+y+'" width="'+(W-12)+'" height="5" fill="#FFD400"/><text x="28" y="'+(y+40)+'" font-size="22" font-weight="800" letter-spacing="6" fill="#FFD400">WAREHOUSE</text><text x="28" y="'+(y+58)+'" font-size="12" fill="#cfcfcf">5300 Mountain Creek Pkwy</text>';
  y+=84;
- if(dS.length){label("SOUTH DOORS  "+rng(dS,dS.length));place(dS,"d",26,26,o.d);y+=8}
- if(sS.length){label("SOUTH YARD  "+rng(sS,sS.length));place(sS,"y",26,46,o.y)}
+ if(dS.length){label("SOUTH DOORS  "+rng(dS),dS,o.d);place(dS,"d",32,32,o.d);y+=6}
+ if(sS.length){label("SOUTH YARD  "+rng(sS),sS,o.y);place(sS,"y",32,56,o.y)}
  var m=$("map");m.setAttribute("viewBox","0 0 "+W+" "+(y+6));m.style.width=Math.round(W*zoom)+"px";m.style.minWidth="0";m.innerHTML=out;
- $("zl").textContent="Zoom "+Math.round(zoom*100)+"%";
+ $("zl").textContent="Zoom "+Math.round(zoom*100)+"%"+(zoomAuto?" (auto)":"");
  $("leg").innerHTML='<span><i style="background:#fff;border:1px solid #bdbdb6"></i>Open</span>'+STATUSES.slice(1,4).map(function(s){return'<span><i style="background:var('+COLORS[s]+')"></i>'+s+'</span>'}).join("")+'<span><i style="background:'+RED+'"></i>Over 24 hours on site</span>'}
-function setZoom(z){zoom=Math.max(.3,Math.min(2.5,z));drawMap()}
+function setZoom(z){zoomAuto=false;zoom=Math.max(.3,Math.min(2.5,z));drawMap()}
 $("zout").onclick=function(){setZoom(zoom-.15)};$("zin").onclick=function(){setZoom(zoom+.15)};$("z1").onclick=function(){setZoom(1)};
-$("zfit").onclick=function(){setZoom(($("mapwrap").clientWidth-18)/mapW())};
+$("zfit").onclick=function(){zoomAuto=true;drawMap()};
+function jump(){var v=$("jump").value.trim().toUpperCase(),m=v.match(/^([DY])?-?(\d+)$/);if(!m)return;
+ var id=(m[1]||"D")+"-"+(m[2].length<2?"0":"")+m[2];
+ if(doorIds().concat(spotIds()).indexOf(id)<0){alert(id+" is not in this layout.");return}
+ sel={t:id.charAt(0)==="D"?"d":"y",id:id};zoomAuto=false;if(zoom<.8)zoom=1;drawMap();renderSel();
+ var g=document.querySelector('.slot[data-id="'+id+'"]');if(g){var wr=$("mapwrap"),a=g.getBoundingClientRect(),b=wr.getBoundingClientRect();wr.scrollLeft+=a.left-b.left-b.width/2}}
+$("jgo").onclick=jump;$("jump").onkeydown=function(e){if(e.key==="Enter")jump()};
+window.addEventListener("resize",function(){if(zoomAuto)drawMap()});
 function renderSel(){
  var el=$("sel");
  if(!sel){el.innerHTML='<span class="note">Scroll the map sideways, then click a door or yard spot to see what is there or assign a trailer.</span>';return}
@@ -316,7 +361,7 @@ function renderSel(){
   if(c.length)h+='<select id="pk">'+c.map(function(i){return'<option value="'+i.id+'">'+esc(i.trailer)+" - "+esc(i.carrier)+" ("+i.status+")</option>"}).join("")+'</select><button class="p" data-s="asg">Assign here</button>';
   h+='<button data-s="newt">New trailer here</button>'}
  el.innerHTML=h}
-function render(){renderTable();drawMap();renderSel();renderChk()}
+function render(){renderTable();drawMap();renderSel();renderChk();renderLog()}
 function byId(id){return items.filter(function(i){return i.id===id})[0]}
 $("map").onclick=function(e){var g=e.target.closest?e.target.closest(".slot"):null;if(!g)return;sel={t:g.getAttribute("data-t"),id:g.getAttribute("data-id")};drawMap();renderSel()};
 $("sel").onclick=function(e){
@@ -329,11 +374,12 @@ $("sel").onclick=function(e){
  else if(a==="edit"){editItem(it);return}
  persist();render()};
 $("capply").onclick=function(){
+ if(lock&&!unl()){alert("The layout is locked.");return}
  function v(i,m){var n=parseInt($(i).value,10);return isNaN(n)?0:Math.max(0,Math.min(m,n))}
- cfg={dn:v("cdn",200),ds:v("cds",200),sn:v("csn",120),ss:v("css",120)};
+ cfg={dn:v("cdn",200),ds:v("cds",200),sn:v("csn",120),ss:v("css",120),rl:v("crl",200)};
  saveCfg();
  sel=null;lists();render()};
-$("cdn").value=cfg.dn;$("cds").value=cfg.ds;$("csn").value=cfg.sn;$("css").value=cfg.ss;lists();
+$("cdn").value=cfg.dn;$("cds").value=cfg.ds;$("csn").value=cfg.sn;$("css").value=cfg.ss;$("crl").value=cfg.rl||0;lists();
 var CK="yardmgr.checks",CC="yardmgr.chk",RL={ok:"OK",wrong:"Wrong spot",missing:"Not found","":"Not checked"};
 function jl(k,d){try{return JSON.parse(localStorage.getItem(k)||"null")||d}catch(e){return d}}
 function js(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -346,7 +392,7 @@ function renderChk(){
  var d=checkedToday(),h="",list=onSite();
  $("chkstat").innerHTML=d?"Today's check was done at "+fmt(d.at)+" by "+esc(d.by)+": "+d.ok+" OK, "+d.wrong+" wrong spot, "+d.missing+" not found.":"Today's check has not been done yet.";
  if(!chk){
-  h='<div class="lay"><label>Checked by<input id="cby" placeholder="Your name" value="'+esc(checks.length?checks[0].by:"")+'"></label><button class="p" data-k="start">Start today\'s check</button></div>';
+  h='<div class="lay"><label>Checked by<input id="cby" placeholder="Your name" value="'+esc(me||(checks.length?checks[0].by:""))+'"></label><button class="p" data-k="start">Start today\'s check</button></div>';
   if(!list.length)h+='<div class="note">No trailers are on site right now. You can still start a check to record that the yard is empty.</div>';
  }else{
   var n=list.filter(function(i){return chk.res[i.id]}).length;
@@ -397,12 +443,43 @@ var migrated=false;
   shadow={};items.forEach(function(i){shadow[i.id]=JSON.stringify(i)});
   if(!sn.metadata.hasPendingWrites)setSync("Shared across computers: live");
   render()},bad);
- DB.collection("checks").onSnapshot(function(sn){
+ DB.collection("checks",{limit:30}).onSnapshot(function(sn){
   checks=sn.docs.map(function(d){return Object.assign({},d.data())}).sort(function(a,b){return a.at<b.at?1:-1});render()},bad);
  DB.doc("config/layout").onSnapshot(function(sn){
-  if(sn.exists){cfg=Object.assign({},sn.data());$("cdn").value=cfg.dn;$("cds").value=cfg.ds;$("csn").value=cfg.sn;$("css").value=cfg.ss;lists();render()}},bad);
+  if(sn.exists){cfg=Object.assign({},sn.data());$("cdn").value=cfg.dn;$("cds").value=cfg.ds;$("csn").value=cfg.sn;$("css").value=cfg.ss;$("crl").value=cfg.rl||0;lists();render()}},bad);
+DB.collection("log",{limit:100}).onSnapshot(function(sn){
+  logs=sn.docs.map(function(d){return Object.assign({},d.data())}).sort(function(a,b){return a.at<b.at?1:-1});renderLog()},bad);
+ DB.doc("config/lock").onSnapshot(function(sn){lock=sn.exists?Object.assign({},sn.data()):null;renderLock()},bad);
 })();
-load();render();
+var LOCKK="yardmgr.lock",lock=jl(LOCKK,null),chg=false,unlMem=false;
+function unl(v){try{if(v===undefined)return sessionStorage.getItem("yardmgr.unl")==="1";if(v)sessionStorage.setItem("yardmgr.unl","1");else sessionStorage.removeItem("yardmgr.unl")}catch(e){if(v===undefined)return unlMem;unlMem=v}return v}
+function hex(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return("0"+x.toString(16)).slice(-2)}).join("")}
+function hashPw(pw,salt){if(!(window.crypto&&crypto.subtle))return Promise.reject(new Error("nocrypto"));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+":"+pw)).then(hex)}
+function saveLock(l){lock=l;if(DB){DB.doc("config/lock").set(l).catch(function(e){setSync("Could not save the password ("+(e&&e.code||"error")+").",true)})}else{try{localStorage.setItem(LOCKK,JSON.stringify(l))}catch(e){}}}
+function renderLock(){
+ var L=!!lock,U=L&&unl(),edit=!L||chg||(L&&!U);
+ ["cdn","cds","csn","css","crl","capply"].forEach(function(k){$(k).disabled=L&&!U});
+ $("lockst").textContent=!L?"Layout is not locked. When your layout is finished, set a password to protect it.":(U?(chg?"Enter a new password.":"Layout is unlocked on this computer. Lock it again when you are done."):"Layout is locked. Enter the password to change it.");
+ $("lpw").style.display=edit?"":"none";$("lpw2").style.display=(!L||chg)?"":"none";
+ $("lpw").placeholder=(!L||chg)?"New password (6+ characters)":"Password";
+ $("lockbtns").innerHTML=!L?'<button class="p" data-l="set">Set password and lock</button>':(!U?'<button class="p" data-l="unlock">Unlock</button>':(chg?'<button class="p" data-l="savenew">Save new password</button><button data-l="cancel">Cancel</button>':'<button class="p" data-l="relock">Lock now</button><button data-l="change">Change password</button>'))}
+$("lockrow").onclick=function(e){
+ var k=e.target.getAttribute("data-l");if(!k)return;
+ var pw=$("lpw").value,pw2=$("lpw2").value;
+ function fail(er){alert(er&&er.message==="nocrypto"?"The password lock needs a secure (https) page.":"Something went wrong. Try again.")}
+ function clr(){$("lpw").value="";$("lpw2").value=""}
+ if(k==="set"||k==="savenew"){
+  if(pw.length<6){alert("Use at least 6 characters.");return}
+  if(pw!==pw2){alert("The two passwords do not match.");return}
+  var salt=hex(crypto.getRandomValues(new Uint8Array(12)));
+  hashPw(pw,salt).then(function(h){saveLock({salt:salt,hash:h});unl(false);chg=false;clr();renderLock();alert("Layout locked.")},fail)}
+ else if(k==="unlock"){
+  hashPw(pw,lock.salt).then(function(h){if(h===lock.hash){unl(true);clr();renderLock()}else alert("Wrong password.")},fail)}
+ else if(k==="relock"){unl(false);renderLock()}
+ else if(k==="change"){chg=true;renderLock()}
+ else if(k==="cancel"){chg=false;clr();renderLock()}};
+$("who").onclick=function(){var n=prompt("Your name:",me);if(n&&n.trim()){me=n.trim();try{localStorage.setItem("yardmgr.me",me)}catch(e){}renderWho()}};
+load();items.forEach(function(i){shadow[i.id]=JSON.stringify(i)});render();renderWho();renderLock();if(!me)setTimeout(ensureMe,500);
 setInterval(function(){renderTable();drawMap()},60000);
 setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
  var used=editId||["trailer","carrier","yard","door","deliv"].some(function(k){return $(k).value});
