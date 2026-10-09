@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+<!-- Copyright (c) 2026 [YOUR NAME]. All rights reserved. Unauthorized copying, reuse or distribution is prohibited. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Yard Manager</title>
+<meta name="copyright" content="Copyright 2026 [YOUR NAME]. All rights reserved.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%9A%9B%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
@@ -101,6 +103,8 @@ tbody tr:hover{background:#fff8cc}
 .leg{margin:10px 0}
 .whobtn{background:#2b2b2b;color:#FFD400;border:1.5px solid #FFD400;border-radius:999px;padding:4px 14px;font-weight:600}
 .logt td{padding:6px 8px;font-size:13.5px}
+textarea{font:inherit;color:var(--ink);background:#fff;border:1.5px solid #cfcfca;border-radius:6px;padding:9px 10px;resize:vertical;min-width:0}
+textarea:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
 </style>
 </head>
 <body>
@@ -148,7 +152,9 @@ tbody tr:hover{background:#fff8cc}
 <label>Yard location<input id="yard" placeholder="Y-14" list="dly"></label>
 <label>Door location<input id="door" placeholder="D-07" list="dld"></label>
 <label>Delivery date<input id="deliv" type="date"></label>
+<label>PO number<input id="po" placeholder="PO-10492"></label>
 <label>Status<select id="status"></select></label>
+<label style="grid-column:1/-1">Comments<textarea id="cmt" rows="2" placeholder="Notes about this trailer, damage, special handling, driver info"></textarea></label>
 </div>
 <div class="bar">
 <button class="p" id="save">Add trailer</button>
@@ -164,7 +170,7 @@ tbody tr:hover{background:#fff8cc}
 <button class="p" id="xl">Export to Excel</button>
 </div>
 <div class="wrap"><table>
-<thead><tr><th>Trailer</th><th>Carrier</th><th>Dir.</th><th>Yard</th><th>Door</th><th>Status</th><th>Check-in</th><th>Completed</th><th>Check-out</th><th>Delivery</th><th>Updated by</th><th>Actions</th></tr></thead>
+<thead><tr><th>Trailer</th><th>Carrier</th><th>PO</th><th>Dir.</th><th>Yard</th><th>Door</th><th>Status</th><th>Check-in</th><th>Completed</th><th>Check-out</th><th>Delivery</th><th>Comments</th><th>Updated by</th><th>Actions</th></tr></thead>
 <tbody id="rows"></tbody>
 </table></div>
 <div class="note">Any trailer on site more than 24 hours after check-in turns red. Check-in, completion and check-out times are stamped when you press the action button. Data is saved in this browser only, so use Export to Excel to keep a copy.</div>
@@ -236,12 +242,12 @@ function renderTable(){
  var q=$("q").value.toLowerCase(),f=$("f").value;
  var list=items.filter(function(i){
   if(f&&i.status!==f)return false;
-  return !q||[i.trailer,i.carrier,i.yard,i.door].join(" ").toLowerCase().indexOf(q)>-1});
+  return !q||[i.trailer,i.carrier,i.yard,i.door,i.po,i.cmt].join(" ").toLowerCase().indexOf(q)>-1});
  var on=items.filter(function(i){return i.status!=="Checked out"}).length;
  var dr=items.filter(function(i){return i.status==="At door"||i.status==="Loading/Unloading"}).length;
  var yd=items.filter(function(i){return i.status==="In yard"}).length;
  $("stats").innerHTML=[["On site",on],["In yard",yd],["At doors",dr],["Completed",items.filter(function(i){return i.status==="Completed"}).length],["Over 24h",items.filter(over).length],["Yard check",checkedToday()?"Done":"Due"]].map(function(s){return'<div class="stat'+(s[0]==="Over 24h"&&s[1]>0?" red":"")+(s[0]==="Yard check"&&s[1]==="Done"?" ok":"")+'"><b>'+s[1]+"</b><span>"+s[0]+"</span></div>"}).join("");
- if(!list.length){$("rows").innerHTML='<tr><td colspan="12" class="empty">'+(items.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
+ if(!list.length){$("rows").innerHTML='<tr><td colspan="14" class="empty">'+(items.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
  $("rows").innerHTML=list.map(function(i){
   var b="";
   if(i.status==="Scheduled")b+='<button data-a="in" data-id="'+i.id+'">Check in</button>';
@@ -250,14 +256,14 @@ function renderTable(){
   if(i.status==="Loading/Unloading")b+='<button data-a="done" data-id="'+i.id+'">Complete</button>';
   if(i.status==="Completed")b+='<button data-a="out" data-id="'+i.id+'">Check out</button>';
   b+='<button data-a="edit" data-id="'+i.id+'">Edit</button><button data-a="del" data-id="'+i.id+'">Delete</button>';
-  return"<tr><td class=loc>"+esc(i.trailer)+"</td><td>"+esc(i.carrier)+"</td><td>"+i.dir+'</td><td class=loc>'+esc(i.yard||"—")+'</td><td class=loc>'+esc(i.door||"—")+
-  '</td><td>'+tagH(i)+"</td><td>"+fmt(i.checkIn)+"</td><td>"+fmt(i.completed)+"</td><td>"+fmt(i.checkOut)+"</td><td>"+fmtDate(i.deliv)+'</td><td>'+(i.updBy?esc(i.updBy)+'<div class="note" style="margin:0">'+fmt(i.updAt)+'</div>':"-")+'</td><td><div class="act">'+b+"</div></td></tr>"}).join("");
+  return"<tr><td class=loc>"+esc(i.trailer)+"</td><td>"+esc(i.carrier)+"</td><td>"+esc(i.po||"-")+"</td><td>"+i.dir+'</td><td class=loc>'+esc(i.yard||"—")+'</td><td class=loc>'+esc(i.door||"—")+
+  '</td><td>'+tagH(i)+"</td><td>"+fmt(i.checkIn)+"</td><td>"+fmt(i.completed)+"</td><td>"+fmt(i.checkOut)+"</td><td>"+fmtDate(i.deliv)+'</td><td style="max-width:240px;white-space:normal">'+esc(i.cmt||"-")+'</td><td>'+(i.updBy?esc(i.updBy)+'<div class="note" style="margin:0">'+fmt(i.updAt)+'</div>':"-")+'</td><td><div class="act">'+b+"</div></td></tr>"}).join("");
 }
-function clearForm(){editId=null;["trailer","carrier","yard","door","deliv"].forEach(function(k){$(k).value=""});$("dir").value="Inbound";$("status").value="Scheduled";$("save").textContent="Add trailer";$("cancel").hidden=true}
+function clearForm(){editId=null;["trailer","carrier","yard","door","deliv","po","cmt"].forEach(function(k){$(k).value=""});$("dir").value="Inbound";$("status").value="Scheduled";$("save").textContent="Add trailer";$("cancel").hidden=true}
 $("save").onclick=function(){
  var t=$("trailer").value.trim(),c=$("carrier").value.trim();
  if(!t||!c){alert("Enter a trailer / load # and a carrier.");return}
- var data={trailer:t,carrier:c,dir:$("dir").value,yard:$("yard").value.trim().toUpperCase(),door:$("door").value.trim().toUpperCase(),deliv:$("deliv").value};
+ var data={trailer:t,carrier:c,dir:$("dir").value,yard:$("yard").value.trim().toUpperCase(),door:$("door").value.trim().toUpperCase(),deliv:$("deliv").value,po:$("po").value.trim(),cmt:$("cmt").value.trim()};
  var s=$("status").value;
  if(editId){var it=items.filter(function(i){return i.id===editId})[0];Object.assign(it,data);if(it.status!==s)setStatus(it,s)}
  else{var n=Object.assign({id:Date.now()+""+Math.floor(Math.random()*999),status:"Scheduled"},data);setStatus(n,s);items.unshift(n)}
@@ -277,8 +283,8 @@ $("rows").onclick=function(e){
  persist();render()};
 function toRows(){
  function dt(t){return t?new Date(t).toLocaleString():""}
- var head=["Trailer / Load #","Carrier","Direction","Yard Location","Door Location","Status","Check-in Time","Completion Time","Check-out Time","Delivery Date","Added By","Added At","Last Updated By","Last Updated At"];
- return [head].concat(items.map(function(i){return[i.trailer,i.carrier,i.dir,i.yard||"",i.door||"",i.status,dt(i.checkIn),dt(i.completed),dt(i.checkOut),i.deliv||"",i.createdBy||"",dt(i.createdAt),i.updBy||"",dt(i.updAt)]}));
+ var head=["Trailer / Load #","Carrier","Direction","Yard Location","Door Location","Status","Check-in Time","Completion Time","Check-out Time","Delivery Date","PO Number","Comments","Added By","Added At","Last Updated By","Last Updated At"];
+ return [head].concat(items.map(function(i){return[i.trailer,i.carrier,i.dir,i.yard||"",i.door||"",i.status,dt(i.checkIn),dt(i.completed),dt(i.checkOut),i.deliv||"",i.po||"",i.cmt||"",i.createdBy||"",dt(i.createdAt),i.updBy||"",dt(i.updAt)]}));
 }
 $("xl").onclick=async function(){
  if(!items.length){alert("Add at least one trailer before exporting.");return}
@@ -286,7 +292,7 @@ $("xl").onclick=async function(){
  try{dl=await claude.use("downloads")}catch(e){}
  if(dl&&window.XLSX){
   var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[16,18,11,14,14,18,20,20,20,14,14,20,16,20].map(function(w){return{wch:w}});
+  ws["!cols"]=[16,18,11,14,14,18,20,20,20,14,14,34,14,20,16,20].map(function(w){return{wch:w}});
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Yard");
   if(checks.length){var cr=[["Check Date","Checked By","Location","Trailer","Carrier","Result","Note"]];
    checks.forEach(function(c){c.lines.forEach(function(l){cr.push([new Date(c.at).toLocaleString(),c.by,l.loc,l.trailer,l.carrier,RL[l.r||""],l.note||""])})});
@@ -299,7 +305,7 @@ $("xl").onclick=async function(){
   try{await navigator.clipboard.writeText(tsv);alert("Downloads are unavailable here, so the table was copied. Paste it into Excel.")}
   catch(e){alert("Export is unavailable in this view.")}
  }};
-function editItem(it){editId=it.id;$("trailer").value=it.trailer;$("carrier").value=it.carrier;$("dir").value=it.dir;$("yard").value=it.yard||"";$("door").value=it.door||"";$("deliv").value=it.deliv||"";$("status").value=it.status;$("save").textContent="Save changes";$("cancel").hidden=false;window.scrollTo(0,0)}
+function editItem(it){editId=it.id;$("trailer").value=it.trailer;$("carrier").value=it.carrier;$("dir").value=it.dir;$("yard").value=it.yard||"";$("door").value=it.door||"";$("deliv").value=it.deliv||"";$("po").value=it.po||"";$("cmt").value=it.cmt||"";$("status").value=it.status;$("save").textContent="Save changes";$("cancel").hidden=false;window.scrollTo(0,0)}
 var LK="yardmgr.layout2",cfg={dn:65,ds:65,sn:20,ss:20},sel=null;
 try{var c0=JSON.parse(localStorage.getItem(LK)||"null");if(c0)cfg=c0}catch(e){}
 function ids(p,a,b){var o=[];for(var i=1;i<=a+b;i++)o.push(p+"-"+(i<10?"0":"")+i);return o}
@@ -315,7 +321,7 @@ function drawMap(){
  function slot(t,id,x,yy,w,h,it){
   var fill=it?(over(it)?RED:"var("+COLORS[it.status]+")"):"#fff";
   var st=(sel&&sel.id===id)?' stroke="#111" stroke-width="3"':(it?' stroke="rgba(0,0,0,.3)" stroke-width="1"':' stroke="#cfcfc8" stroke-width="1"');
-  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="5" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+(it?h/2-2:h/2+4))+'" text-anchor="middle" font-size="'+(id.length>4?8.5:10)+'" font-weight="700" fill="'+(it?"#fff":"#8a8a84")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+11)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">'+esc(String(it.trailer).slice(-6))+'</text>':"")+'</g>'}
+  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+")"+(it.po?", PO "+esc(it.po):"")+", "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="5" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+(it?h/2-2:h/2+4))+'" text-anchor="middle" font-size="'+(id.length>4?8.5:10)+'" font-weight="700" fill="'+(it?"#fff":"#8a8a84")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+11)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">'+esc(String(it.trailer).slice(-6))+'</text>':"")+'</g>'}
  function place(list,t,w,h,map){
   var rows=Math.ceil(list.length/per),keep=out;out="";
   for(var i=0;i<list.length;i++){var r=Math.floor(i/per),c=i%per,n=Math.min(per,list.length-r*per),off=(W-28-(n*cw+Math.floor((n-1)/5)*8))/2;
@@ -351,7 +357,7 @@ function renderSel(){
  if(!sel){el.innerHTML='<span class="note">Scroll the map sideways, then click a door or yard spot to see what is there or assign a trailer.</span>';return}
  var o=occ(),isD=sel.t==="d",it=(isD?o.d:o.y)[sel.id],h="<b>"+(isD?"Door ":"Yard spot ")+sel.id+"</b>";
  if(it){
-  h+=tagH(it)+"<span>"+esc(it.trailer)+", "+esc(it.carrier)+", delivery "+fmtDate(it.deliv)+"</span>";
+  h+=tagH(it)+"<span>"+esc(it.trailer)+", "+esc(it.carrier)+(it.po?", PO "+esc(it.po):"")+", delivery "+fmtDate(it.deliv)+"</span>"+(it.cmt?'<span class="note" style="flex:1 1 100%;margin:0">Comments: '+esc(it.cmt)+"</span>":"");
   if(isD){var nx={"At door":["work","Start work"],"Loading/Unloading":["done","Complete"]}[it.status];if(nx)h+='<button class="p" data-s="'+nx[0]+'" data-id="'+it.id+'">'+nx[1]+"</button>"}
   else{var od=doorIds().filter(function(d){return!o.d[d]});h+='<select id="od">'+od.map(function(d){return"<option>"+d+"</option>"}).join("")+'</select><button class="p" data-s="tod" data-id="'+it.id+'">Send to door</button>'}
   h+='<button data-s="edit" data-id="'+it.id+'">Edit details</button>'}
@@ -482,7 +488,7 @@ $("who").onclick=function(){var n=prompt("Your name:",me);if(n&&n.trim()){me=n.t
 load();items.forEach(function(i){shadow[i.id]=JSON.stringify(i)});render();renderWho();renderLock();if(!me)setTimeout(ensureMe,500);
 setInterval(function(){renderTable();drawMap()},60000);
 setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
- var used=editId||["trailer","carrier","yard","door","deliv"].some(function(k){return $(k).value});
+ var used=editId||["trailer","carrier","yard","door","deliv","po","cmt"].some(function(k){return $(k).value});
  if(!t&&!used)location.reload()},300000);
 </script>
 </body>
