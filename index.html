@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Yard Manager</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%9A%9B%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f2f2f2;--panel:#fff;--ink:#111;--mute:#555;--line:#d4d4d4;--acc:#FFD400;--accink:#111;
---s-sched:#6b6b6b;--s-yard:#FFD400;--s-door:#111111;--s-work:#8a6d00;--s-done:#2e7d32;--s-out:#9e9e9e;
+--s-sched:#6b6b6b;--s-yard:#1565c0;--s-door:#2e7d32;--s-work:#6a1b9a;--s-done:#111111;--s-out:#9e9e9e;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -64,21 +66,55 @@ button.p:hover{background:#ffe252}
 button:hover{border-color:#111}
 input:focus,select:focus,button:focus-visible{outline:3px solid #111;outline-offset:1px}
 .slot:hover rect{stroke:#111;stroke-width:2}
-.ckr button.on-wr{color:#111}
 .loc{font-weight:800}
 #chkp h2{border-left:8px solid #FFD400;padding-left:8px}
+body{background:#f4f4f1;font-size:15px}
+.top{background:#111;border-bottom:5px solid #FFD400;padding:16px 14px}
+.top .in{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.top h1{margin:0;font:800 30px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:1.5px;text-transform:uppercase;background:#FFD400;color:#111;padding:7px 16px;border:0;border-radius:4px}
+.top .sub{margin:0;color:#e6e6e6;flex:1;min-width:220px}
+#sync{font-size:12.5px;padding:4px 12px;border-radius:999px;background:#2b2b2b;color:#d8d8d8}
+#sync.bad{color:#ff8a80}
+main{max-width:1400px;padding:20px 14px 50px}
+.stats{gap:12px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid #e0e0dc;border-left:6px solid #FFD400;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.07);padding:10px 18px;min-width:120px}
+.stat b{font:800 32px/1.05 "Barlow Condensed","Arial Narrow",sans-serif;color:#111}
+.stat span{text-transform:uppercase;letter-spacing:.6px;font-size:11.5px;font-weight:600}
+.stat.red{border-left-color:#c62828}.stat.red b{color:#c62828}
+.stat.ok{border-left-color:#2e7d32}.stat.ok b{color:#2e7d32}
+.panel{background:#fff;border:1px solid #e0e0dc;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);padding:16px 18px;margin-bottom:18px}
+.panel h2,#chkp h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.5px;text-transform:uppercase;margin:0 0 12px;border-left:8px solid #FFD400;padding-left:10px}
+label{font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+input,select{background:#fff;border:1.5px solid #cfcfca;border-radius:6px;padding:9px 10px;font-size:15px}
+input:focus,select:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
+button{border-radius:6px;border:1.5px solid #cfcfca;font-weight:600;padding:7px 12px}
+button.p{box-shadow:0 2px 0 #111}
+button.p:active{transform:translateY(1px);box-shadow:0 1px 0 #111}
+th{padding:11px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+tbody tr:nth-child(even){background:#fafaf7}
+tbody tr:hover{background:#fff8cc}
+.tag{padding:3px 11px;border-radius:999px;font-weight:700}
+#sel{background:#fffbe0;border:1.5px solid #FFD400;border-radius:8px;padding:12px}
+#mapwrap{background:#fafaf8;border:1px solid #e8e8e3;border-radius:8px;padding:8px}
+.zoom{display:flex;gap:6px;align-items:center;margin:0 0 10px;flex-wrap:wrap}
+.zoom button{padding:5px 12px}
+.leg{margin:10px 0}
 </style>
 </head>
 <body>
 <datalist id="dly"></datalist><datalist id="dld"></datalist>
-<main>
+<header class="top"><div class="in">
 <h1>Yard Manager</h1>
-<div class="note" id="sync" style="margin:0 0 4px"></div>
-<p class="sub">5300 Mountain Creek Pkwy, Dallas, TX 75236. Track every trailer from gate to dock to departure.</p>
+<p class="sub">5300 Mountain Creek Pkwy, Dallas, TX 75236. Every trailer from gate to dock to departure.</p>
+<div id="sync"></div>
+</div></header>
+<main>
 <div class="stats" id="stats"></div>
 
 <div class="panel">
-<div class="wrap"><svg id="map" role="img" aria-label="Yard map"></svg></div>
+<h2>Yard map</h2>
+<div class="zoom"><button id="zout">&minus;</button><button id="zin">+</button><button id="zfit">Fit to screen</button><button id="z1">100%</button><span class="note" id="zl"></span></div>
+<div class="wrap" id="mapwrap"><svg id="map" role="img" aria-label="Yard map"></svg></div>
 <div class="leg" id="leg"></div>
 <div id="sel"></div>
 <details><summary>Set up my layout (doors and yard spots)</summary>
@@ -98,6 +134,7 @@ input:focus,select:focus,button:focus-visible{outline:3px solid #111;outline-off
 </div>
 
 <div class="panel">
+<h2>Add or edit a trailer</h2>
 <div class="grid">
 <label>Trailer / load #<input id="trailer" placeholder="TRL-4821"></label>
 <label>Carrier<input id="carrier" placeholder="Carrier name"></label>
@@ -114,6 +151,7 @@ input:focus,select:focus,button:focus-visible{outline:3px solid #111;outline-off
 </div>
 
 <div class="panel">
+<h2>Trailers</h2>
 <div class="tools">
 <input id="q" placeholder="Search trailer, carrier, yard or door" aria-label="Search">
 <select id="f" aria-label="Filter by status"></select>
@@ -136,7 +174,7 @@ var KEY="yardmgr.v1",items=[],editId=null;
 function $(i){return document.getElementById(i)}
 function load(){try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}}
 var DB=null,shadow={},q=Promise.resolve();
-function setSync(t,bad){var e=$("sync");if(e){e.textContent=t;e.style.color=bad?"#c62828":"var(--mute)"}}
+function setSync(t,bad){var e=$("sync");if(e){e.textContent=t;e.className=bad?"bad":""}}
 function persist(){
  if(!DB){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}return}
  var cur={},ops=[];items.forEach(function(i){cur[i.id]=JSON.stringify(i)});
@@ -159,7 +197,7 @@ function setStatus(it,s){
 }
 var RED="#c62828";
 function over(i){return i.status!=="Checked out"&&!!i.checkIn&&Date.now()-new Date(i.checkIn).getTime()>864e5}
-function tagH(i){var o=over(i);return'<span class="tag" style="background:'+(o?RED:"var("+COLORS[i.status]+")")+';color:'+(o||i.status!=="In yard"?"#fff":"#111")+'">'+i.status+(o?" (24h+)":"")+"</span>"}
+function tagH(i){var o=over(i);return'<span class="tag" style="background:'+(o?RED:"var("+COLORS[i.status]+")")+'">'+i.status+(o?" (24h+)":"")+"</span>"}
 function renderTable(){
  var q=$("q").value.toLowerCase(),f=$("f").value;
  var list=items.filter(function(i){
@@ -168,7 +206,7 @@ function renderTable(){
  var on=items.filter(function(i){return i.status!=="Checked out"}).length;
  var dr=items.filter(function(i){return i.status==="At door"||i.status==="Loading/Unloading"}).length;
  var yd=items.filter(function(i){return i.status==="In yard"}).length;
- $("stats").innerHTML=[["On site",on],["In yard",yd],["At doors",dr],["Completed",items.filter(function(i){return i.status==="Completed"}).length],["Over 24h",items.filter(over).length],["Yard check",checkedToday()?"Done":"Due"]].map(function(s){return'<div class="stat"><b>'+s[1]+"</b><span>"+s[0]+"</span></div>"}).join("");
+ $("stats").innerHTML=[["On site",on],["In yard",yd],["At doors",dr],["Completed",items.filter(function(i){return i.status==="Completed"}).length],["Over 24h",items.filter(over).length],["Yard check",checkedToday()?"Done":"Due"]].map(function(s){return'<div class="stat'+(s[0]==="Over 24h"&&s[1]>0?" red":"")+(s[0]==="Yard check"&&s[1]==="Done"?" ok":"")+'"><b>'+s[1]+"</b><span>"+s[0]+"</span></div>"}).join("");
  if(!list.length){$("rows").innerHTML='<tr><td colspan="11" class="empty">'+(items.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
  $("rows").innerHTML=list.map(function(i){
   var b="";
@@ -235,26 +273,34 @@ function doorIds(){return ids("D",cfg.dn,cfg.ds)}
 function spotIds(){return ids("Y",cfg.sn,cfg.ss)}
 function occ(){var d={},y={};items.forEach(function(i){if(i.status==="At door"||i.status==="Loading/Unloading"){if(i.door)d[i.door]=i}else if(i.status==="In yard"&&i.yard)y[i.yard]=i});return{d:d,y:y}}
 function lists(){$("dly").innerHTML=spotIds().map(function(x){return'<option value="'+x+'">'}).join("");$("dld").innerHTML=doorIds().map(function(x){return'<option value="'+x+'">'}).join("")}
+var zoom=1;
+function mapW(){return Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,10)*30+20}
 function drawMap(){
- var o=occ(),dI=doorIds(),sI=spotIds(),cw=30,per=Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,10),W=per*cw+20,y=8,out="";
+ var o=occ(),dI=doorIds(),sI=spotIds(),cw=30,per=Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,10),W=per*cw+20,y=6,out="";
  function slot(t,id,x,yy,w,h,it){
-  var st=(sel&&sel.id===id)?' stroke="var(--ink)" stroke-width="3"':' stroke="var(--mute)" stroke-width="1"'+(it?"":' stroke-dasharray="3 2"');
-  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="3" fill="'+(it?(over(it)?RED:"var("+COLORS[it.status]+")"):"var(--panel)")+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+h/2+(it?-1:3))+'" text-anchor="middle" font-size="9" fill="'+(it?(!over(it)&&it.status==="In yard"?"#111":"#fff"):"var(--mute)")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+9)+'" text-anchor="middle" font-size="8" fill="'+(!over(it)&&it.status==="In yard"?"#111":"#fff")+'">'+esc(String(it.trailer).slice(-5))+'</text>':"")+'</g>'}
+  var fill=it?(over(it)?RED:"var("+COLORS[it.status]+")"):"#fff";
+  var st=(sel&&sel.id===id)?' stroke="#111" stroke-width="3"':(it?' stroke="rgba(0,0,0,.35)" stroke-width="1"':' stroke="#bdbdb6" stroke-width="1"');
+  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="4" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+h/2+(it?-1:3))+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+(it?"#fff":"#777")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+9)+'" text-anchor="middle" font-size="8" fill="#fff">'+esc(String(it.trailer).slice(-5))+'</text>':"")+'</g>'}
  function place(list,t,w,h,map){
   var rows=Math.ceil(list.length/per);
   for(var i=0;i<list.length;i++){var r=Math.floor(i/per),c=i%per,n=Math.min(per,list.length-r*per);
    out+=slot(t,list[i],10+(per-n)*cw/2+c*cw+(cw-w)/2,y+r*(h+4),w,h,map[list[i]])}
   y+=rows*(h+4)}
- place(sI.slice(0,cfg.sn),"y",26,46,o.y);
- if(cfg.sn)y+=6;
- place(dI.slice(0,cfg.dn),"d",26,26,o.d);
- out+='<rect x="10" y="'+(y+2)+'" width="'+(W-20)+'" height="70" rx="4" fill="var(--bg)" stroke="var(--line)"/><text x="'+W/2+'" y="'+(y+42)+'" text-anchor="middle" font-size="12" fill="var(--mute)">Warehouse</text>';
- y+=76;
- place(dI.slice(cfg.dn),"d",26,26,o.d);
- if(cfg.ss)y+=6;
- place(sI.slice(cfg.sn),"y",26,46,o.y);
- var m=$("map");m.setAttribute("viewBox","0 0 "+W+" "+(y+4));m.style.width="100%";m.style.minWidth=W+"px";m.innerHTML=out;
- $("leg").innerHTML='<span><i style="border:1px dashed var(--mute)"></i>Open</span>'+STATUSES.slice(1,4).map(function(s){return'<span><i style="background:var('+COLORS[s]+')"></i>'+s+'</span>'}).join("")+'<span><i style="background:'+RED+'"></i>Over 24 hours on site</span>'}
+ function label(txt){out+='<text x="12" y="'+(y+10)+'" font-size="11" font-weight="700" letter-spacing="1.2" fill="#666">'+txt+'</text>';y+=16}
+ function rng(l,n){return n?l[0]+" TO "+l[n-1]:""}
+ var dN=dI.slice(0,cfg.dn),dS=dI.slice(cfg.dn),sN=sI.slice(0,cfg.sn),sS=sI.slice(cfg.sn);
+ if(sN.length){label("NORTH YARD  "+rng(sN,sN.length));place(sN,"y",26,46,o.y);y+=8}
+ if(dN.length){label("NORTH DOORS  "+rng(dN,dN.length));place(dN,"d",26,26,o.d);y+=4}
+ out+='<rect x="10" y="'+y+'" width="'+(W-20)+'" height="76" rx="6" fill="#1a1a1a"/><rect x="10" y="'+y+'" width="'+(W-20)+'" height="5" fill="#FFD400"/><text x="30" y="'+(y+40)+'" font-size="20" font-weight="800" letter-spacing="5" fill="#FFD400">WAREHOUSE</text><text x="30" y="'+(y+60)+'" font-size="11" fill="#cfcfcf">5300 Mountain Creek Pkwy</text>';
+ y+=84;
+ if(dS.length){label("SOUTH DOORS  "+rng(dS,dS.length));place(dS,"d",26,26,o.d);y+=8}
+ if(sS.length){label("SOUTH YARD  "+rng(sS,sS.length));place(sS,"y",26,46,o.y)}
+ var m=$("map");m.setAttribute("viewBox","0 0 "+W+" "+(y+6));m.style.width=Math.round(W*zoom)+"px";m.style.minWidth="0";m.innerHTML=out;
+ $("zl").textContent="Zoom "+Math.round(zoom*100)+"%";
+ $("leg").innerHTML='<span><i style="background:#fff;border:1px solid #bdbdb6"></i>Open</span>'+STATUSES.slice(1,4).map(function(s){return'<span><i style="background:var('+COLORS[s]+')"></i>'+s+'</span>'}).join("")+'<span><i style="background:'+RED+'"></i>Over 24 hours on site</span>'}
+function setZoom(z){zoom=Math.max(.3,Math.min(2.5,z));drawMap()}
+$("zout").onclick=function(){setZoom(zoom-.15)};$("zin").onclick=function(){setZoom(zoom+.15)};$("z1").onclick=function(){setZoom(1)};
+$("zfit").onclick=function(){setZoom(($("mapwrap").clientWidth-18)/mapW())};
 function renderSel(){
  var el=$("sel");
  if(!sel){el.innerHTML='<span class="note">Scroll the map sideways, then click a door or yard spot to see what is there or assign a trailer.</span>';return}
