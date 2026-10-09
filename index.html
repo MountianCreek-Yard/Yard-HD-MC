@@ -6,11 +6,9 @@
 <title>Yard Manager</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%9A%9B%3C/text%3E%3C/svg%3E">
 <style>
-:root{--bg:#eef0ea;--panel:#fff;--ink:#1d2320;--mute:#66706a;--line:#d5dad3;--acc:#1f5f4a;--accink:#fff;
---s-sched:#8a8f8c;--s-yard:#b7791f;--s-door:#2b6cb0;--s-work:#6b46c1;--s-done:#2f855a;--s-out:#4a5568;
+:root{--bg:#f2f2f2;--panel:#fff;--ink:#111;--mute:#555;--line:#d4d4d4;--acc:#FFD400;--accink:#111;
+--s-sched:#6b6b6b;--s-yard:#FFD400;--s-door:#111111;--s-work:#8a6d00;--s-done:#2e7d32;--s-out:#9e9e9e;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141916;--panel:#1c231f;--ink:#e6ebe7;--mute:#97a39b;--line:#2f3a34;--acc:#5fb590;--accink:#0e1612}}
-:root[data-theme="dark"]{--bg:#141916;--panel:#1c231f;--ink:#e6ebe7;--mute:#97a39b;--line:#2f3a34;--acc:#5fb590;--accink:#0e1612}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Barlow","Segoe UI",system-ui,sans-serif}
@@ -56,6 +54,19 @@ details{margin-top:10px}summary{cursor:pointer;color:var(--mute);font-size:13px}
 .ckr button.on-no{background:#c62828;color:#fff;border-color:#c62828}
 .hist{margin-top:12px}.hist details{margin:4px 0}.hist li{font-size:13.5px}
 #chkp h2{font:700 20px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 6px}
+body{background:#fff}
+h1{display:inline-block;background:#FFD400;color:#111;padding:4px 14px;border:2px solid #111}
+.panel,.stat{border:2px solid #111}
+.stat b{color:#111}
+th{background:#111;color:#FFD400;border-bottom:0}
+button.p{background:#FFD400;color:#111;border:2px solid #111;font-weight:700}
+button.p:hover{background:#ffe252}
+button:hover{border-color:#111}
+input:focus,select:focus,button:focus-visible{outline:3px solid #111;outline-offset:1px}
+.slot:hover rect{stroke:#111;stroke-width:2}
+.ckr button.on-wr{color:#111}
+.loc{font-weight:800}
+#chkp h2{border-left:8px solid #FFD400;padding-left:8px}
 </style>
 </head>
 <body>
@@ -148,7 +159,7 @@ function setStatus(it,s){
 }
 var RED="#c62828";
 function over(i){return i.status!=="Checked out"&&!!i.checkIn&&Date.now()-new Date(i.checkIn).getTime()>864e5}
-function tagH(i){var o=over(i);return'<span class="tag" style="background:'+(o?RED:"var("+COLORS[i.status]+")")+'">'+i.status+(o?" (24h+)":"")+"</span>"}
+function tagH(i){var o=over(i);return'<span class="tag" style="background:'+(o?RED:"var("+COLORS[i.status]+")")+';color:'+(o||i.status!=="In yard"?"#fff":"#111")+'">'+i.status+(o?" (24h+)":"")+"</span>"}
 function renderTable(){
  var q=$("q").value.toLowerCase(),f=$("f").value;
  var list=items.filter(function(i){
@@ -228,7 +239,7 @@ function drawMap(){
  var o=occ(),dI=doorIds(),sI=spotIds(),cw=30,per=Math.max(cfg.dn,cfg.ds,cfg.sn,cfg.ss,10),W=per*cw+20,y=8,out="";
  function slot(t,id,x,yy,w,h,it){
   var st=(sel&&sel.id===id)?' stroke="var(--ink)" stroke-width="3"':' stroke="var(--mute)" stroke-width="1"'+(it?"":' stroke-dasharray="3 2"');
-  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="3" fill="'+(it?(over(it)?RED:"var("+COLORS[it.status]+")"):"var(--panel)")+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+h/2+(it?-1:3))+'" text-anchor="middle" font-size="9" fill="'+(it?"#fff":"var(--mute)")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+9)+'" text-anchor="middle" font-size="8" fill="#fff">'+esc(String(it.trailer).slice(-5))+'</text>':"")+'</g>'}
+  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+"), "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="3" fill="'+(it?(over(it)?RED:"var("+COLORS[it.status]+")"):"var(--panel)")+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+h/2+(it?-1:3))+'" text-anchor="middle" font-size="9" fill="'+(it?(!over(it)&&it.status==="In yard"?"#111":"#fff"):"var(--mute)")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+9)+'" text-anchor="middle" font-size="8" fill="'+(!over(it)&&it.status==="In yard"?"#111":"#fff")+'">'+esc(String(it.trailer).slice(-5))+'</text>':"")+'</g>'}
  function place(list,t,w,h,map){
   var rows=Math.ceil(list.length/per);
   for(var i=0;i<list.length;i++){var r=Math.floor(i/per),c=i%per,n=Math.min(per,list.length-r*per);
@@ -347,6 +358,9 @@ var migrated=false;
 })();
 load();render();
 setInterval(function(){renderTable();drawMap()},60000);
+setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
+ var used=editId||["trailer","carrier","yard","door","deliv"].some(function(k){return $(k).value});
+ if(!t&&!used)location.reload()},300000);
 </script>
 </body>
 </html>
