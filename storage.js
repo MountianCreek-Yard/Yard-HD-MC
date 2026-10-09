@@ -6,7 +6,9 @@
 
   function supaDB() {
     var U = CFG.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/yard_docs";
-    var H = { apikey: CFG.SUPABASE_ANON_KEY, Authorization: "Bearer " + CFG.SUPABASE_ANON_KEY, "Content-Type": "application/json" };
+    var H = { apikey: CFG.SUPABASE_ANON_KEY, "Content-Type": "application/json" };
+    // Older "anon" keys are JWTs and go in Authorization too; newer "sb_publishable_" keys do not.
+    if (CFG.SUPABASE_ANON_KEY.indexOf("sb_") !== 0) H.Authorization = "Bearer " + CFG.SUPABASE_ANON_KEY;
     var pending = 0, ticks = [];
     function req(url, opt) {
       return fetch(url, opt).then(function (r) {
@@ -17,11 +19,11 @@
     function poke() { ticks.forEach(function (t) { t(); }); }
     function done() { pending--; poke(); }
     function fail(e) { pending--; throw e; }
-    function watch(coll, cb, err) {
+    function watch(coll, cb, err, extra) {
       var last = null, stop = false;
       function tick() {
         if (stop || pending > 0) return;
-        req(U + "?coll=eq." + encodeURIComponent(coll) + "&select=path,data", { headers: H }).then(function (rows) {
+        req(U + "?coll=eq." + encodeURIComponent(coll) + "&select=path,data" + (extra || ""), { headers: H }).then(function (rows) {
           var j = JSON.stringify(rows);
           if (j !== last) { last = j; cb(rows); }
         }, function (e) { if (err) err(e); });
@@ -55,8 +57,9 @@
           }
         };
       },
-      collection: function (coll) {
-        return { onSnapshot: function (cb, err) { return watch(coll, function (rows) { cb(collSnap(rows)); }, err); } };
+      collection: function (coll, opts) {
+        var extra = opts && opts.limit ? "&order=path.desc&limit=" + opts.limit : "";
+        return { onSnapshot: function (cb, err) { return watch(coll, function (rows) { cb(collSnap(rows)); }, err, extra); } };
       }
     };
   }
@@ -79,3 +82,4 @@
     }
   };
 })();
+
