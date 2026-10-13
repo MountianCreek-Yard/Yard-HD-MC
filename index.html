@@ -154,7 +154,7 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 </div></div>
 <datalist id="dly"></datalist><datalist id="dld"></datalist>
 <header class="top"><div class="in">
-<h1>Yard Manager</h1><span class="sitepill" id="sitepill"></span>
+<h1>Yard Manager</h1><span class="sitepill" id="sitepill"></span><select id="locsel" class="sitepill" hidden aria-label="Location"></select>
 <p class="sub" id="subtxt"></p>
 <div id="sync"></div>
 <button class="whobtn" id="who"></button>
@@ -256,7 +256,7 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 <div class="panel" id="adminp" data-pg="admin" hidden>
 <h2>Admin: people <span id="admbadge"></span></h2>
 <div class="note" style="margin:0 0 10px">New people create their own account, then wait here for your approval. Set their site, team and role, then press Save. Role "pending" and "disabled" cannot see any yard data.</div>
-<div class="wrap"><table class="logt" style="min-width:860px"><thead><tr><th>Name</th><th>Email</th><th>Site</th><th>Team</th><th>Role</th><th></th></tr></thead><tbody id="admrows"></tbody></table></div>
+<div class="wrap"><table class="logt" style="min-width:860px"><thead><tr><th>Name</th><th>Email</th><th>Yards they can open</th><th>Team</th><th>Role</th><th></th></tr></thead><tbody id="admrows"></tbody></table></div>
 <div class="bar"><button id="admref">Refresh list</button></div>
 </div>
 
@@ -270,7 +270,10 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var CFGY=window.YARD_CONFIG||{};
-var SITE=Object.assign({NAME:"Mountain Creek",ADDRESS:"5300 Mountain Creek Pkwy, Dallas, TX 75236",KEY:"mc",PREFIX:"",OTHER_KEY:"fm",OTHER_NAME:"Flower Mound"},CFGY.SITE||{});
+var LOCS=CFGY.LOCATIONS||[{KEY:"mc",NAME:"Mountain Creek",ADDRESS:"5300 Mountain Creek Pkwy, Dallas, TX 75236",PREFIX:""},{KEY:"fm",NAME:"Flower Mound",ADDRESS:"Flower Mound, TX",PREFIX:"fm"}];
+var LOCK0="yardmgr.loc",locSel=(function(){try{return localStorage.getItem(LOCK0)||""}catch(e){return""}})();
+var L0=LOCS.filter(function(k){return k.KEY===locSel})[0]||LOCS[0],OT=LOCS.filter(function(k){return k.KEY!==L0.KEY})[0]||{};
+var SITE=Object.assign({},L0,{OTHER_KEY:OT.KEY||"",OTHER_NAME:OT.NAME||""});
 var SK=SITE.PREFIX?"yardmgr."+SITE.PREFIX+".":"yardmgr.";
 function P(c){return SITE.PREFIX?SITE.PREFIX+"_"+c:c}
 function scoped(raw){return{raw:raw,doc:function(p){var a=p.split("/");a[0]=P(a[0]);return raw.doc(a.join("/"))},collection:function(n,o){return raw.collection(P(n),o)}}}
@@ -669,7 +672,12 @@ $("erows").onclick=function(e){
  else if(a==="del"){if(!confirm("Delete "+it.trailer+"?"))return;items=items.filter(function(i){return i!==it})}
  persist();render()};
 var PROFILE=null,amode="login",started=false,PEOPLE=[];
-function siteName(k){return k===SITE.KEY?SITE.NAME:k===SITE.OTHER_KEY?SITE.OTHER_NAME:(k||"no site")}
+function siteName(k){var l=LOCS.filter(function(x){return x.KEY===k})[0];return l?l.NAME:(k||"no site")}
+function setupLoc(allowed){
+ var sl=$("locsel");
+ if(allowed.length>1){sl.innerHTML=allowed.map(function(k){return'<option value="'+k+'"'+(k===SITE.KEY?" selected":"")+">"+esc(siteName(k))+"</option>"}).join("");sl.hidden=false;$("sitepill").hidden=true}
+ else{sl.hidden=true;$("sitepill").hidden=false}}
+$("locsel").onchange=function(){try{localStorage.setItem(LOCK0,this.value)}catch(e){}location.reload()};
 function authMsg(t,bad){var m=$("authmsg");m.textContent=t||"";m.className="note"+(bad?" bad":"")}
 function authShow(mode,msg,bad){
  amode=mode;$("auth").hidden=false;var wait=mode==="wait";
@@ -687,7 +695,10 @@ async function afterLogin(){
  if(!pr){authShow("wait","Your account has no profile yet. Ask the admin.",1);return}
  if(pr.role==="pending"){authShow("wait","Thanks, "+(pr.name||pr.email)+". Your account is waiting for the admin to approve it. Press Check again after you have been approved.");return}
  if(pr.role!=="admin"&&pr.role!=="user"){authShow("wait","This account has been turned off. Ask the admin if you need access.",1);return}
- if(pr.role!=="admin"&&pr.site!==SITE.KEY){authShow("wait","Your account is set up for "+siteName(pr.site)+". Open that site's address to sign in there.",1);return}
+ var allowed=pr.role==="admin"?LOCS.map(function(k){return k.KEY}):((pr.sites&&pr.sites.length?pr.sites:(pr.site?[pr.site]:[])).filter(function(k){return LOCS.some(function(l){return l.KEY===k})}));
+ if(!allowed.length){authShow("wait","No yard has been assigned to your account yet. Ask the admin.",1);return}
+ if(allowed.indexOf(SITE.KEY)<0){try{localStorage.setItem(LOCK0,allowed[0])}catch(e){}location.reload();return}
+ setupLoc(allowed);
  PROFILE=pr;me=pr.name||pr.email;try{localStorage.setItem((SK+"me"),me)}catch(e){}
  if(pr.role!=="admin"&&pr.team&&TABS.indexOf(pr.team)>-1)tab=pr.team;
  $("auth").hidden=true;document.body.classList.remove("authpending");
@@ -717,7 +728,7 @@ $("aforgot").onclick=async function(){var em=$("aemail").value.trim();if(!em){au
  try{await YardAuth.recover(em);authMsg("If that email has an account, a reset link is on its way.")}catch(e){authMsg(e.message||"Could not send the email.",1)}};
 $("acheck").onclick=afterLogin;$("aout").onclick=signOut;
 async function gate(){
- if(!(window.YardAuth&&YardAuth.on)){document.body.classList.remove("authpending");$("nav-activity").hidden=false;showPage(page);startDB();return}
+ if(!(window.YardAuth&&YardAuth.on)){document.body.classList.remove("authpending");setupLoc(LOCS.map(function(k){return k.KEY}));$("nav-activity").hidden=false;showPage(page);startDB();return}
  try{if(await YardAuth.recoveryFromHash()){authShow("setpw","Choose a new password.");return}}catch(e){}
  var u=null;try{u=await YardAuth.restore()}catch(e){}
  if(!u){authShow("login");return}
@@ -730,13 +741,13 @@ function renderPeople(){
  var pend=PEOPLE.filter(function(p){return p.role==="pending"}).length;$("admbadge").textContent=pend?pend+" waiting":"";
  $("admrows").innerHTML=PEOPLE.length?PEOPLE.map(function(p){var self=PROFILE&&p.id===PROFILE.id,d='data-id="'+p.id+'"';
   return'<tr class="'+(p.role==="pending"?"unread":"")+'"><td><input data-f="name" '+d+' value="'+esc(p.name||"")+'" style="width:150px"></td><td>'+esc(p.email||"")+'</td>'+
-  '<td><select data-f="site" '+d+'><option value="">Not set</option>'+opt([[SITE.KEY,SITE.NAME],[SITE.OTHER_KEY,SITE.OTHER_NAME]],p.site)+"</select></td>"+
+  '<td>'+LOCS.map(function(l){var on=p.role==="admin"||(p.sites&&p.sites.indexOf(l.KEY)>-1)||(!(p.sites&&p.sites.length)&&p.site===l.KEY);return'<label style="flex-direction:row;align-items:center;gap:5px;text-transform:none;font-size:14px;color:inherit;margin:0"><input type="checkbox" data-f="loc" value="'+l.KEY+'"'+(on?" checked":"")+(p.role==="admin"?" disabled":"")+">"+esc(l.NAME)+"</label>"}).join("")+"</td>"+
   '<td><select data-f="team" '+d+">"+opt(TABS,p.team||"All")+"</select></td>"+
   '<td><select data-f="role" '+d+(self?" disabled":"")+">"+opt(["pending","user","admin","disabled"],p.role)+'</select></td><td><button class="p" data-a="saveuser" '+d+">Save</button></td></tr>"}).join(""):'<tr><td colspan="6" class="empty">No people yet.</td></tr>'}
 $("admrows").onclick=async function(e){
  if(e.target.getAttribute("data-a")!=="saveuser")return;
- var tr=e.target.closest("tr"),g=function(f){return tr.querySelector('[data-f="'+f+'"]').value},patch={name:g("name").trim(),site:g("site")||null,team:g("team"),role:g("role")};
- if(patch.role==="user"&&!patch.site){alert("Choose a site for this person first.");return}
+ var tr=e.target.closest("tr"),g=function(f){return tr.querySelector('[data-f="'+f+'"]').value},ls=[].slice.call(tr.querySelectorAll('[data-f="loc"]:checked')).map(function(x){return x.value}),patch={name:g("name").trim(),sites:ls,site:ls[0]||null,team:g("team"),role:g("role")};
+ if(patch.role==="user"&&!ls.length){alert("Tick at least one yard for this person first.");return}
  try{await YardAuth.updateProfile(e.target.getAttribute("data-id"),patch);await loadPeople()}catch(er){alert("Could not save ("+(er.code||"error")+").")}};
 $("admref").onclick=loadPeople;
 $("who").onclick=function(){if(PROFILE){if(confirm("Sign out of "+me+"?"))signOut();return}var n=prompt("Your name:",me);if(n&&n.trim()){me=n.trim();try{localStorage.setItem((SK+"me"),me)}catch(e){}renderWho()}};
@@ -749,4 +760,3 @@ setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTARE
  if(!t&&!used)location.reload()},300000);
 </script>
 </body>
-</html>
