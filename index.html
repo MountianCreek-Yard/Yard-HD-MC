@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2026 [YOUR NAME]. All rights reserved. Unauthorized copying, reuse or distribution is prohibited. -->
+<!-- Copyright (c) 2026 [David Kerr]. All rights reserved. Unauthorized copying, reuse or distribution is prohibited. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -125,6 +125,17 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 #auth .bar{margin-top:12px}
 #auth .bad{color:#c62828;font-weight:600}
 #auth button[hidden]{display:none}
+.off{display:none!important}
+.nav{background:#1b1b1b;border-bottom:4px solid #FFD400;position:sticky;top:0;z-index:60}
+.nav .in{max-width:1400px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:8px 14px;-webkit-overflow-scrolling:touch}
+.nav button{flex:0 0 auto;background:transparent;color:#fff;border:0;border-radius:6px;padding:9px 16px;font:700 17px "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+.nav button:hover{background:#333}
+.nav button.on{background:#FFD400;color:#111}
+.nav button[hidden]{display:none}
+.nav .nb{display:inline-block;min-width:22px;padding:0 6px;margin-left:6px;border-radius:999px;background:#333;color:#FFD400;font-size:14px;text-align:center}
+.nav button.on .nb{background:#111}
+.nav .nb.alert{background:#c62828;color:#fff}
+.nav .nb:empty{display:none}
 </style>
 </head>
 <body class="authpending">
@@ -149,11 +160,20 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 <button class="whobtn" id="who"></button>
 <button class="whobtn" id="msgbtn">Messages</button>
 </div></header>
+<nav class="nav" id="nav"><div class="in">
+<button data-p="map">Yard map</button>
+<button data-p="trailers">Trailers <span class="nb" id="nb-trailers"></span></button>
+<button data-p="empty">Empty trailers <span class="nb" id="nb-empty"></span></button>
+<button data-p="check">Daily check <span class="nb" id="nb-check"></span></button>
+<button data-p="messages">Messages <span class="nb" id="nb-messages"></span></button>
+<button data-p="activity" id="nav-activity" hidden>Activity</button>
+<button data-p="admin" id="nav-admin" hidden>Admin <span class="nb" id="nb-admin"></span></button>
+</div></nav>
 <main>
-<div class="tabs" id="tabs"></div>
-<div class="stats" id="stats"></div>
+<div class="tabs" id="tabs" data-pg="map trailers messages"></div>
+<div class="stats" id="stats" data-pg="map trailers"></div>
 
-<div class="panel">
+<div class="panel" data-pg="map">
 <h2>Yard map</h2>
 <div class="zoom"><button id="zout">&minus;</button><button id="zin">+</button><button id="zfit">Fit to screen</button><button id="z1">100%</button><input id="jump" placeholder="Jump to D-89 or Y-14" style="width:180px"><button id="jgo">Go</button><span class="note" id="zl"></span></div>
 <div class="wrap" id="mapwrap"><svg id="map" role="img" aria-label="Yard map"></svg></div>
@@ -172,20 +192,20 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 <div class="note">Schematic only, not to scale. Doors are named D-01, D-02… from north wall to south wall; yard spots Y-01… the same way. Match these to your real door and spot numbers.</div>
 </details></div>
 
-<div class="panel" id="chkp">
+<div class="panel" id="chkp" data-pg="check">
 <h2>Daily yard check</h2>
 <div id="chkstat" class="note" style="margin:0 0 10px"></div>
 <div id="chkbody"></div>
 </div>
 
-<div class="panel" id="emptyp">
+<div class="panel" id="emptyp" data-pg="empty">
 <h2>Empty trailers in the yard</h2>
 <div class="lay"><label>Trailer #<input id="et" placeholder="EMP-3307"></label><label>Carrier / owner<input id="ec" placeholder="Optional"></label><label>Yard spot<input id="ey" placeholder="Y-22" list="dly"></label><label style="flex:1 1 220px">Comments<input id="ecm" placeholder="Condition, where it came from"></label><button class="p" id="eadd">Add empty trailer</button></div>
 <div class="note">Empty trailers have no PO number. They show on the map in gray and do not turn red after 24 hours.</div>
 <div class="wrap" style="margin-top:10px"><table style="min-width:760px"><thead><tr><th>Trailer</th><th>Carrier / owner</th><th>Yard spot</th><th>In yard since</th><th>Days</th><th>Comments</th><th>Updated by</th><th>Actions</th></tr></thead><tbody id="erows"></tbody></table></div>
 </div>
 
-<div class="panel">
+<div class="panel" id="formp" data-pg="map">
 <h2>Add or edit a trailer</h2>
 <div class="grid">
 <label>Trailer / load #<input id="trailer" placeholder="TRL-4821"></label>
@@ -205,7 +225,7 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 </div>
 </div>
 
-<div class="panel">
+<div class="panel" data-pg="trailers">
 <h2>Trailers</h2>
 <div class="tools">
 <input id="q" placeholder="Search trailer, carrier, yard or door" aria-label="Search">
@@ -221,7 +241,7 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 </table></div>
 <div class="note">Any trailer on site more than 24 hours after check-in turns red. Check-in, completion and check-out times are stamped when you press the action button. Data is saved in this browser only, so use Export to Excel to keep a copy.</div>
 </div>
-<div class="panel" id="msgp">
+<div class="panel" id="msgp" data-pg="messages">
 <h2>Messages <span id="msgbadge"></span></h2>
 <div class="note" id="msgnote" style="margin:0 0 10px"></div>
 <div class="lay"><label>To<input id="mto" disabled style="width:150px"></label>
@@ -233,14 +253,14 @@ body.authpending header.top,body.authpending main{visibility:hidden}
 <div class="wrap" style="margin-top:10px"><table class="logt" style="min-width:760px"><thead><tr><th>When</th><th>From</th><th>Team</th><th>Message</th><th>Trailer</th><th></th></tr></thead><tbody id="msgrows"></tbody></table></div>
 </div>
 
-<div class="panel" id="adminp" hidden>
+<div class="panel" id="adminp" data-pg="admin" hidden>
 <h2>Admin: people <span id="admbadge"></span></h2>
 <div class="note" style="margin:0 0 10px">New people create their own account, then wait here for your approval. Set their site, team and role, then press Save. Role "pending" and "disabled" cannot see any yard data.</div>
 <div class="wrap"><table class="logt" style="min-width:860px"><thead><tr><th>Name</th><th>Email</th><th>Site</th><th>Team</th><th>Role</th><th></th></tr></thead><tbody id="admrows"></tbody></table></div>
 <div class="bar"><button id="admref">Refresh list</button></div>
 </div>
 
-<div class="panel">
+<div class="panel" data-pg="activity">
 <h2>Recent activity</h2>
 <div class="wrap"><table class="logt" style="min-width:520px"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logb"></tbody></table></div>
 </div>
@@ -385,7 +405,7 @@ $("xl").onclick=async function(){
   try{await navigator.clipboard.writeText(tsv);alert("Downloads are unavailable here, so the table was copied. Paste it into Excel.")}
   catch(e){alert("Export is unavailable in this view.")}
  }};
-function editItem(it){editId=it.id;$("trailer").value=it.trailer;$("carrier").value=it.carrier;$("dir").value=it.dir;$("yard").value=it.yard||"";$("door").value=it.door||"";$("deliv").value=it.deliv||"";$("po").value=it.po||"";$("ltype").value=it.empty?"Empty":"Loaded";$("po").disabled=!!it.empty;$("cmt").value=it.cmt||"";$("status").value=it.status;$("save").textContent="Save changes";$("cancel").hidden=false;window.scrollTo(0,0)}
+function editItem(it){showPage("map");editId=it.id;$("trailer").value=it.trailer;$("carrier").value=it.carrier;$("dir").value=it.dir;$("yard").value=it.yard||"";$("door").value=it.door||"";$("deliv").value=it.deliv||"";$("po").value=it.po||"";$("ltype").value=it.empty?"Empty":"Loaded";$("po").disabled=!!it.empty;$("cmt").value=it.cmt||"";$("status").value=it.status;$("save").textContent="Save changes";$("cancel").hidden=false;$("formp").scrollIntoView({block:"start"})}
 var LK=(SK+"layout2"),cfg={dn:65,ds:65,sn:20,ss:20},sel=null;
 try{var c0=JSON.parse(localStorage.getItem(LK)||"null");if(c0)cfg=c0}catch(e){}
 function ids(p,a,b){var o=[];for(var i=1;i<=a+b;i++)o.push(p+"-"+(i<10?"0":"")+i);return o}
@@ -447,13 +467,13 @@ function renderSel(){
   if(c.length)h+='<select id="pk">'+c.map(function(i){return'<option value="'+i.id+'">'+esc(i.trailer)+" - "+esc(i.carrier)+" ("+i.status+")</option>"}).join("")+'</select><button class="p" data-s="asg">Assign here</button>';
   h+='<button data-s="newt">New trailer here</button>'}
  el.innerHTML=h}
-function render(){renderTable();drawMap();renderSel();renderChk();renderLog();renderEmpty();renderTabs();renderMsgs()}
+function render(){renderTable();drawMap();renderSel();renderChk();renderLog();renderEmpty();renderTabs();renderMsgs();renderNav()}
 function byId(id){return items.filter(function(i){return i.id===id})[0]}
 $("map").onclick=function(e){var g=e.target.closest?e.target.closest(".slot"):null;if(!g)return;sel={t:g.getAttribute("data-t"),id:g.getAttribute("data-id")};drawMap();renderSel()};
 $("sel").onclick=function(e){
  var a=e.target.getAttribute("data-s");if(!a)return;var it=byId(e.target.getAttribute("data-id"));
  if(a==="asg"){it=byId($("pk").value);if(sel.t==="d"){it.door=sel.id;setStatus(it,"At door")}else{it.yard=sel.id;setStatus(it,"In yard")}}
- else if(a==="newt"){clearForm();if(sel.t==="d"){$("door").value=sel.id;$("status").value="At door"}else{$("yard").value=sel.id;$("status").value="In yard"}$("trailer").focus();window.scrollTo(0,$("trailer").getBoundingClientRect().top+window.scrollY-90);return}
+ else if(a==="newt"){showPage("map");clearForm();if(sel.t==="d"){$("door").value=sel.id;$("status").value="At door"}else{$("yard").value=sel.id;$("status").value="In yard"}$("trailer").focus();window.scrollTo(0,$("trailer").getBoundingClientRect().top+window.scrollY-90);return}
  else if(a==="work")setStatus(it,"Loading/Unloading");
  else if(a==="done")setStatus(it,"Completed");
  else if(a==="tod"){var d=$("od").value;if(!d)return;it.door=d;setStatus(it,"At door");sel={t:"d",id:d}}
@@ -501,7 +521,7 @@ $("chkbody").onclick=function(e){
  else if(k==="wrong"){var it=byId(e.target.getAttribute("data-id"));var w=prompt("Where is "+it.trailer+" actually? For example Y-22","");if(w===null)return;w=w.trim().toUpperCase();
   chk.res[it.id]={r:"wrong",note:w?"Found at "+w:""};
   if(w&&confirm("Update the system to "+w+"?")){if(it.status==="In yard"||it.status==="Completed")it.yard=w;else it.door=w;persist();render()}}
- else if(k==="unl"){chk.unlisted++;js(CC,chk);clearForm();$("status").value="In yard";$("trailer").focus();window.scrollTo(0,$("trailer").getBoundingClientRect().top+window.scrollY-90);renderChk();return}
+ else if(k==="unl"){showPage("map");chk.unlisted++;js(CC,chk);clearForm();$("status").value="In yard";$("trailer").focus();window.scrollTo(0,$("trailer").getBoundingClientRect().top+window.scrollY-90);renderChk();return}
  else if(k==="cancel"){if(!confirm("Cancel this check? Marks made so far will be lost."))return;chk=null;try{localStorage.removeItem(CC)}catch(x){}renderChk();return}
  else if(k==="fin"){
   var list=onSite(),left=list.filter(function(i){return!chk.res[i.id]}).length;
@@ -592,7 +612,7 @@ function renderMsgs(){
   (m.tr?esc(m.tr.trailer)+(m.tr.po?" / "+esc(m.tr.po):"")+" ("+esc(m.tr.carrier)+")"+'<div class="note" style="margin:0">'+esc(m.tr.dir||"")+", "+esc(m.tr.status||"")+(m.tr.loc?" at "+esc(m.tr.loc):"")+"</div>":"-")+
   '</td><td><div class="act">'+(un?'<button data-m="read" data-id="'+m.id+'">Mark read</button>':"")+(mine?"":'<button data-m="reply" data-id="'+m.id+'">Reply</button>')+"</div></td></tr>"}).join(""):'<tr><td colspan="6" class="empty">No messages yet.</td></tr>'}
 function saveMsg(m){if(DB)DB.raw.doc("messages/"+m.id).set(m).catch(function(e){setSync("Could not save the message ("+(e&&e.code||"error")+").",true)})}
-$("msgbtn").onclick=function(){$("msgp").scrollIntoView({behavior:"smooth"})};
+$("msgbtn").onclick=function(){showPage("messages")};
 $("msend").onclick=function(){
  if(!DB){alert("Messaging needs the shared database.");return}
  var t=$("mtxt").value.trim();if(!t){alert("Type a message first.");return}
@@ -607,6 +627,21 @@ $("msgrows").onclick=function(e){
  var m=msgs.filter(function(x){return x.id===e.target.getAttribute("data-id")})[0];if(!m)return;
  if(a==="read"){ensureMe();m.readAt=new Date().toISOString();m.readBy=me;saveMsg(m);renderMsgs()}
  else if(a==="reply"){$("mteam").value=m.team||"All teams";$("mtxt").value="Re: ";$("mtxt").focus();window.scrollTo(0,$("msgp").getBoundingClientRect().top+window.scrollY-20)}};
+var PAGES=["map","trailers","empty","check","messages","activity","admin"],page=(function(){try{return localStorage.getItem(SK+"page")||"map"}catch(e){return"map"}})();
+function showPage(p){
+ if(PAGES.indexOf(p)<0||(p==="admin"&&$("nav-admin").hidden)||(p==="activity"&&$("nav-activity").hidden))p="map";
+ page=p;try{localStorage.setItem(SK+"page",p)}catch(e){}
+ document.querySelectorAll("[data-pg]").forEach(function(el){el.classList.toggle("off",el.getAttribute("data-pg").split(" ").indexOf(p)<0)});
+ document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-p")===p)});
+ if(p==="map")drawMap();
+ window.scrollTo(0,0)}
+function renderNav(){
+ var L=items.filter(function(i){return!i.empty&&i.status!=="Checked out"}).length,E=items.filter(function(i){return i.empty&&i.status!=="Checked out"}).length;
+ var un=msgs.filter(function(m){return m.to===SITE.KEY&&!m.readAt}).length,pend=PEOPLE.filter(function(p){return p.role==="pending"}).length;
+ $("nb-trailers").textContent=L||"";$("nb-empty").textContent=E||"";
+ $("nb-check").textContent=checkedToday()?"":"due";$("nb-messages").textContent=un||"";$("nb-messages").classList.toggle("alert",un>0);
+ $("nb-admin").textContent=pend||"";$("nb-admin").classList.toggle("alert",pend>0)}
+$("nav").onclick=function(e){var b=e.target.closest("button");if(b)showPage(b.getAttribute("data-p"))};
 function renderEmpty(){
  var el=$("erows");if(!el)return;
  var list=items.filter(function(i){return i.empty&&i.status!=="Checked out"}).sort(function(a,b){return String(a.yard||"").localeCompare(String(b.yard||""),undefined,{numeric:true})});
@@ -656,7 +691,8 @@ async function afterLogin(){
  PROFILE=pr;me=pr.name||pr.email;try{localStorage.setItem((SK+"me"),me)}catch(e){}
  if(pr.role!=="admin"&&pr.team&&TABS.indexOf(pr.team)>-1)tab=pr.team;
  $("auth").hidden=true;document.body.classList.remove("authpending");
- if(pr.role==="admin"){$("adminp").hidden=false;loadPeople()}
+ if(pr.role==="admin"){$("adminp").hidden=false;$("nav-admin").hidden=false;loadPeople()}
+ $("nav-activity").hidden=pr.role!=="admin";
  renderWho();renderLock();render();
  if(!started){started=true;startDB()}}
 async function authGo(){
@@ -681,7 +717,7 @@ $("aforgot").onclick=async function(){var em=$("aemail").value.trim();if(!em){au
  try{await YardAuth.recover(em);authMsg("If that email has an account, a reset link is on its way.")}catch(e){authMsg(e.message||"Could not send the email.",1)}};
 $("acheck").onclick=afterLogin;$("aout").onclick=signOut;
 async function gate(){
- if(!(window.YardAuth&&YardAuth.on)){document.body.classList.remove("authpending");startDB();return}
+ if(!(window.YardAuth&&YardAuth.on)){document.body.classList.remove("authpending");$("nav-activity").hidden=false;showPage(page);startDB();return}
  try{if(await YardAuth.recoveryFromHash()){authShow("setpw","Choose a new password.");return}}catch(e){}
  var u=null;try{u=await YardAuth.restore()}catch(e){}
  if(!u){authShow("login");return}
@@ -705,7 +741,7 @@ $("admrows").onclick=async function(e){
 $("admref").onclick=loadPeople;
 $("who").onclick=function(){if(PROFILE){if(confirm("Sign out of "+me+"?"))signOut();return}var n=prompt("Your name:",me);if(n&&n.trim()){me=n.trim();try{localStorage.setItem((SK+"me"),me)}catch(e){}renderWho()}};
 load();items.forEach(function(i){shadow[i.id]=JSON.stringify(i)});$("subtxt").textContent=SITE.NAME+" yard, "+SITE.ADDRESS+". Every trailer from gate to dock to departure.";$("sitepill").textContent=SITE.NAME;document.title="Yard Manager - "+SITE.NAME;
-render();renderWho();renderLock();if(!me&&!(window.YardAuth&&YardAuth.on))setTimeout(ensureMe,500);
+render();renderWho();renderLock();showPage(page);if(!me&&!(window.YardAuth&&YardAuth.on))setTimeout(ensureMe,500);
 gate();
 setInterval(function(){renderTable();drawMap()},60000);
 setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
