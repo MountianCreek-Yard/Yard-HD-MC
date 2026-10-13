@@ -105,17 +105,52 @@ tbody tr:hover{background:#fff8cc}
 .logt td{padding:6px 8px;font-size:13.5px}
 textarea{font:inherit;color:var(--ink);background:#fff;border:1.5px solid #cfcfca;border-radius:6px;padding:9px 10px;resize:vertical;min-width:0}
 textarea:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.tabs button{padding:9px 18px;font:700 17px "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.6px;background:#fff;border:2px solid #111;border-radius:8px}
+.tabs button.on{background:#FFD400;box-shadow:0 3px 0 #111}
+.tabs .cnt{display:inline-block;min-width:22px;padding:0 6px;margin-left:6px;border-radius:999px;background:#111;color:#FFD400;font-size:14px;text-align:center}
+.tools label{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
+.sitepill{background:#fff;color:#111;font:700 15px "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:1px;padding:6px 12px;border-radius:4px}
+.unread td{background:#fff8cc;font-weight:600}
+#msgbadge{background:#c62828;color:#fff;border-radius:999px;font:700 13px "Barlow",sans-serif;padding:1px 9px;margin-left:8px;vertical-align:middle}
+#msgbadge:empty{display:none}
+body.authpending header.top,body.authpending main{visibility:hidden}
+#auth{position:fixed;inset:0;z-index:2000;background:#111;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+#auth[hidden]{display:none}
+#auth .card{background:#fff;color:#111;border-radius:12px;border-top:8px solid #FFD400;max-width:400px;width:100%;padding:22px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#auth h2{font:800 28px/1.1 "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;margin:0 0 6px}
+#auth label{margin:10px 0 0;color:#444}
+#auth label[hidden]{display:none}
+#auth input{width:100%;background:#fff;color:#111}
+#auth .bar{margin-top:12px}
+#auth .bad{color:#c62828;font-weight:600}
+#auth button[hidden]{display:none}
 </style>
 </head>
-<body>
+<body class="authpending">
+<div id="auth" hidden><div class="card">
+<h2 id="authh">Sign in</h2>
+<p class="note" id="authmsg"></p>
+<div id="authform">
+<label id="lname" hidden>Your name<input id="aname" autocomplete="name"></label>
+<label id="lemail">Email<input id="aemail" type="email" autocomplete="username"></label>
+<label id="lpass">Password<input id="apass" type="password" autocomplete="current-password"></label>
+<label id="lpass2" hidden>Confirm password<input id="apass2" type="password" autocomplete="new-password"></label>
+<div class="bar"><button class="p" id="abtn">Sign in</button></div>
+<div class="bar"><button id="amode">Create an account</button><button id="aforgot">Forgot password</button></div>
+</div>
+<div id="authwait" hidden><div class="bar"><button class="p" id="acheck">Check again</button><button id="aout">Sign out</button></div></div>
+</div></div>
 <datalist id="dly"></datalist><datalist id="dld"></datalist>
 <header class="top"><div class="in">
-<h1>Yard Manager</h1>
-<p class="sub">5300 Mountain Creek Pkwy, Dallas, TX 75236. Every trailer from gate to dock to departure.</p>
+<h1>Yard Manager</h1><span class="sitepill" id="sitepill"></span>
+<p class="sub" id="subtxt"></p>
 <div id="sync"></div>
 <button class="whobtn" id="who"></button>
+<button class="whobtn" id="msgbtn">Messages</button>
 </div></header>
 <main>
+<div class="tabs" id="tabs"></div>
 <div class="stats" id="stats"></div>
 
 <div class="panel">
@@ -143,15 +178,23 @@ textarea:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
 <div id="chkbody"></div>
 </div>
 
+<div class="panel" id="emptyp">
+<h2>Empty trailers in the yard</h2>
+<div class="lay"><label>Trailer #<input id="et" placeholder="EMP-3307"></label><label>Carrier / owner<input id="ec" placeholder="Optional"></label><label>Yard spot<input id="ey" placeholder="Y-22" list="dly"></label><label style="flex:1 1 220px">Comments<input id="ecm" placeholder="Condition, where it came from"></label><button class="p" id="eadd">Add empty trailer</button></div>
+<div class="note">Empty trailers have no PO number. They show on the map in gray and do not turn red after 24 hours.</div>
+<div class="wrap" style="margin-top:10px"><table style="min-width:760px"><thead><tr><th>Trailer</th><th>Carrier / owner</th><th>Yard spot</th><th>In yard since</th><th>Days</th><th>Comments</th><th>Updated by</th><th>Actions</th></tr></thead><tbody id="erows"></tbody></table></div>
+</div>
+
 <div class="panel">
 <h2>Add or edit a trailer</h2>
 <div class="grid">
 <label>Trailer / load #<input id="trailer" placeholder="TRL-4821"></label>
 <label>Carrier<input id="carrier" placeholder="Carrier name"></label>
-<label>Direction<select id="dir"><option>Inbound</option><option>Outbound</option></select></label>
+<label>Direction<select id="dir"><option>Inbound</option><option>Outbound</option><option>Outbound STO</option></select></label>
 <label>Yard location<input id="yard" placeholder="Y-14" list="dly"></label>
 <label>Door location<input id="door" placeholder="D-07" list="dld"></label>
 <label>Delivery date<input id="deliv" type="date"></label>
+<label>Load type<select id="ltype"><option>Loaded</option><option>Empty</option></select></label>
 <label>PO number<input id="po" placeholder="PO-10492"></label>
 <label>Status<select id="status"></select></label>
 <label style="grid-column:1/-1">Comments<textarea id="cmt" rows="2" placeholder="Notes about this trailer, damage, special handling, driver info"></textarea></label>
@@ -167,6 +210,9 @@ textarea:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
 <div class="tools">
 <input id="q" placeholder="Search trailer, carrier, yard or door" aria-label="Search">
 <select id="f" aria-label="Filter by status"></select>
+<select id="fc" aria-label="Filter by carrier"></select>
+<label>Delivery from<input id="fd1" type="date"></label><label>to<input id="fd2" type="date"></label>
+<button id="fclr">Clear filters</button>
 <button class="p" id="xl">Export to Excel</button>
 </div>
 <div class="wrap"><table>
@@ -175,6 +221,25 @@ textarea:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
 </table></div>
 <div class="note">Any trailer on site more than 24 hours after check-in turns red. Check-in, completion and check-out times are stamped when you press the action button. Data is saved in this browser only, so use Export to Excel to keep a copy.</div>
 </div>
+<div class="panel" id="msgp">
+<h2>Messages <span id="msgbadge"></span></h2>
+<div class="note" id="msgnote" style="margin:0 0 10px"></div>
+<div class="lay"><label>To<input id="mto" disabled style="width:150px"></label>
+<label>Team<select id="mteam"><option>All teams</option><option>Inbound</option><option>Outbound</option><option>Outbound STO</option></select></label>
+<label>Attach a trailer<select id="mtr"><option value="">None</option></select></label>
+<label style="flex:1 1 280px">Message<input id="mtxt" placeholder="Type a message for the other site"></label>
+<button class="p" id="msend">Send</button></div>
+<div class="bar"><button id="mrall">Mark all read</button></div>
+<div class="wrap" style="margin-top:10px"><table class="logt" style="min-width:760px"><thead><tr><th>When</th><th>From</th><th>Team</th><th>Message</th><th>Trailer</th><th></th></tr></thead><tbody id="msgrows"></tbody></table></div>
+</div>
+
+<div class="panel" id="adminp" hidden>
+<h2>Admin: people <span id="admbadge"></span></h2>
+<div class="note" style="margin:0 0 10px">New people create their own account, then wait here for your approval. Set their site, team and role, then press Save. Role "pending" and "disabled" cannot see any yard data.</div>
+<div class="wrap"><table class="logt" style="min-width:860px"><thead><tr><th>Name</th><th>Email</th><th>Site</th><th>Team</th><th>Role</th><th></th></tr></thead><tbody id="admrows"></tbody></table></div>
+<div class="bar"><button id="admref">Refresh list</button></div>
+</div>
+
 <div class="panel">
 <h2>Recent activity</h2>
 <div class="wrap"><table class="logt" style="min-width:520px"><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody id="logb"></tbody></table></div>
@@ -184,20 +249,25 @@ textarea:focus{border-color:#111;outline:3px solid #FFD400;outline-offset:0}
 <script src="storage.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+var CFGY=window.YARD_CONFIG||{};
+var SITE=Object.assign({NAME:"Mountain Creek",ADDRESS:"5300 Mountain Creek Pkwy, Dallas, TX 75236",KEY:"mc",PREFIX:"",OTHER_KEY:"fm",OTHER_NAME:"Flower Mound"},CFGY.SITE||{});
+var SK=SITE.PREFIX?"yardmgr."+SITE.PREFIX+".":"yardmgr.";
+function P(c){return SITE.PREFIX?SITE.PREFIX+"_"+c:c}
+function scoped(raw){return{raw:raw,doc:function(p){var a=p.split("/");a[0]=P(a[0]);return raw.doc(a.join("/"))},collection:function(n,o){return raw.collection(P(n),o)}}}
 var STATUSES=["Scheduled","In yard","At door","Loading/Unloading","Completed","Checked out"];
 var COLORS={"Scheduled":"--s-sched","In yard":"--s-yard","At door":"--s-door","Loading/Unloading":"--s-work","Completed":"--s-done","Checked out":"--s-out"};
-var KEY="yardmgr.v1",items=[],editId=null;
+var KEY=(SK+"v1"),items=[],editId=null;
 function $(i){return document.getElementById(i)}
 function load(){try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}}
 var DB=null,shadow={},q=Promise.resolve();
 function setSync(t,bad){var e=$("sync");if(e){e.textContent=t;e.className=bad?"bad":""}}
-var me=(function(){try{return localStorage.getItem("yardmgr.me")||""}catch(e){return""}})();
-var logs=(function(){try{return JSON.parse(localStorage.getItem("yardmgr.log")||"[]")}catch(e){return[]}})();
-function ensureMe(){if(me)return;var n=prompt("Enter your name so every change shows who made it:");me=(n||"").trim()||"Unknown";try{localStorage.setItem("yardmgr.me",me)}catch(e){}renderWho()}
-function renderWho(){var b=$("who");if(b)b.textContent=me?"Signed in as "+me+" (change)":"Set your name"}
+var me=(function(){try{return localStorage.getItem((SK+"me"))||""}catch(e){return""}})();
+var logs=(function(){try{return JSON.parse(localStorage.getItem((SK+"log"))||"[]")}catch(e){return[]}})();
+function ensureMe(){if(me)return;var n=prompt("Enter your name so every change shows who made it:");me=(n||"").trim()||"Unknown";try{localStorage.setItem((SK+"me"),me)}catch(e){}renderWho()}
+function renderWho(){var b=$("who");if(b)b.textContent=me?"Signed in as "+me+(PROFILE?" (sign out)":" (change)"):"Set your name"}
 function core(i){var c=Object.assign({},i);delete c.updBy;delete c.updAt;delete c.createdBy;delete c.createdAt;return JSON.stringify(c)}
 function describe(i,old){
- if(!old)return"Added "+i.trailer+" ("+i.carrier+")";
+ if(!old)return"Added "+(i.empty?"empty trailer ":"")+i.trailer+" ("+i.carrier+")";
  var o=JSON.parse(old);
  if(o.status!==i.status)return i.trailer+": "+o.status+" to "+i.status+(i.status==="At door"||i.status==="Loading/Unloading"?" at "+(i.door||"?"):i.status==="In yard"?" at "+(i.yard||"?"):"");
  if(o.yard!==i.yard||o.door!==i.door)return i.trailer+": moved to "+(i.door||i.yard||"?");
@@ -205,7 +275,7 @@ function describe(i,old){
 function addLog(text){
  var r={at:new Date().toISOString(),by:me||"Unknown",text:text};
  if(DB){DB.doc("log/l"+Date.now()+Math.floor(Math.random()*9000+1000)).set(r).catch(function(){})}
- else{logs.unshift(r);logs=logs.slice(0,200);try{localStorage.setItem("yardmgr.log",JSON.stringify(logs))}catch(e){}}}
+ else{logs.unshift(r);logs=logs.slice(0,200);try{localStorage.setItem((SK+"log"),JSON.stringify(logs))}catch(e){}}}
 function renderLog(){
  var el=$("logb");if(!el)return;
  el.innerHTML=logs.length?logs.slice(0,40).map(function(l){return"<tr><td>"+fmt(l.at)+"</td><td>"+esc(l.by)+"</td><td>"+esc(l.text)+"</td></tr>"}).join(""):'<tr><td colspan="3" class="empty">No activity yet.</td></tr>'}
@@ -236,18 +306,26 @@ function setStatus(it,s){
  if(s==="Checked out"){if(!it.checkIn)it.checkIn=now();if(!it.completed)it.completed=now();if(!it.checkOut)it.checkOut=now()}
 }
 var RED="#c62828";
-function over(i){return i.status!=="Checked out"&&!!i.checkIn&&Date.now()-new Date(i.checkIn).getTime()>864e5}
-function tagH(i){var o=over(i);return'<span class="tag" style="background:'+(o?RED:"var("+COLORS[i.status]+")")+'">'+i.status+(o?" (24h+)":"")+"</span>"}
+function over(i){return!i.empty&&i.status!=="Checked out"&&!!i.checkIn&&Date.now()-new Date(i.checkIn).getTime()>864e5}
+function tagH(i){var o=over(i),em=i.empty&&!o;return'<span class="tag" style="background:'+(o?RED:em?"#7b8794":"var("+COLORS[i.status]+")")+'">'+(em?"Empty"+(i.status==="In yard"?"":" ("+i.status+")"):i.status+(o?" (24h+)":""))+"</span>"}
 function renderTable(){
  var q=$("q").value.toLowerCase(),f=$("f").value;
+ var fcEl=$("fc"),fcv=fcEl.value,cs=[];items.forEach(function(i){if(!i.empty&&cs.indexOf(i.carrier)<0)cs.push(i.carrier)});cs.sort();
+ fcEl.innerHTML='<option value="">All carriers</option>'+cs.map(function(c){return"<option>"+esc(c)+"</option>"}).join("");fcEl.value=fcv;
+ var L=items.filter(function(i){return!i.empty&&inTab(i)}),E=items.filter(function(i){return i.empty&&i.status!=="Checked out"});
  var list=items.filter(function(i){
+  if(i.empty||!inTab(i))return false;
+  var fc=$("fc").value,d1=$("fd1").value,d2=$("fd2").value;
+  if(fc&&i.carrier!==fc)return false;
+  if(d1&&(!i.deliv||i.deliv<d1))return false;
+  if(d2&&(!i.deliv||i.deliv>d2))return false;
   if(f&&i.status!==f)return false;
   return !q||[i.trailer,i.carrier,i.yard,i.door,i.po,i.cmt].join(" ").toLowerCase().indexOf(q)>-1});
- var on=items.filter(function(i){return i.status!=="Checked out"}).length;
- var dr=items.filter(function(i){return i.status==="At door"||i.status==="Loading/Unloading"}).length;
- var yd=items.filter(function(i){return i.status==="In yard"}).length;
- $("stats").innerHTML=[["On site",on],["In yard",yd],["At doors",dr],["Completed",items.filter(function(i){return i.status==="Completed"}).length],["Over 24h",items.filter(over).length],["Yard check",checkedToday()?"Done":"Due"]].map(function(s){return'<div class="stat'+(s[0]==="Over 24h"&&s[1]>0?" red":"")+(s[0]==="Yard check"&&s[1]==="Done"?" ok":"")+'"><b>'+s[1]+"</b><span>"+s[0]+"</span></div>"}).join("");
- if(!list.length){$("rows").innerHTML='<tr><td colspan="14" class="empty">'+(items.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
+ var on=L.filter(function(i){return i.status!=="Checked out"}).length;
+ var dr=L.filter(function(i){return i.status==="At door"||i.status==="Loading/Unloading"}).length;
+ var yd=L.filter(function(i){return i.status==="In yard"}).length;
+ $("stats").innerHTML=[["On site",on],["In yard",yd],["At doors",dr],["Completed",L.filter(function(i){return i.status==="Completed"}).length],["Over 24h",L.filter(over).length],["Empty trailers",E.length],["Yard check",checkedToday()?"Done":"Due"]].map(function(s){return'<div class="stat'+(s[0]==="Over 24h"&&s[1]>0?" red":"")+(s[0]==="Yard check"&&s[1]==="Done"?" ok":"")+'"><b>'+s[1]+"</b><span>"+s[0]+"</span></div>"}).join("");
+ if(!list.length){$("rows").innerHTML='<tr><td colspan="14" class="empty">'+(L.length?"No trailers match your search.":"No trailers yet. Add your first one above.")+"</td></tr>";return}
  $("rows").innerHTML=list.map(function(i){
   var b="";
   if(i.status==="Scheduled")b+='<button data-a="in" data-id="'+i.id+'">Check in</button>';
@@ -259,22 +337,24 @@ function renderTable(){
   return"<tr><td class=loc>"+esc(i.trailer)+"</td><td>"+esc(i.carrier)+"</td><td>"+esc(i.po||"-")+"</td><td>"+i.dir+'</td><td class=loc>'+esc(i.yard||"—")+'</td><td class=loc>'+esc(i.door||"—")+
   '</td><td>'+tagH(i)+"</td><td>"+fmt(i.checkIn)+"</td><td>"+fmt(i.completed)+"</td><td>"+fmt(i.checkOut)+"</td><td>"+fmtDate(i.deliv)+'</td><td style="max-width:240px;white-space:normal">'+esc(i.cmt||"-")+'</td><td>'+(i.updBy?esc(i.updBy)+'<div class="note" style="margin:0">'+fmt(i.updAt)+'</div>':"-")+'</td><td><div class="act">'+b+"</div></td></tr>"}).join("");
 }
-function clearForm(){editId=null;["trailer","carrier","yard","door","deliv","po","cmt"].forEach(function(k){$(k).value=""});$("dir").value="Inbound";$("status").value="Scheduled";$("save").textContent="Add trailer";$("cancel").hidden=true}
+function clearForm(){editId=null;["trailer","carrier","yard","door","deliv","po","cmt"].forEach(function(k){$(k).value=""});$("dir").value="Inbound";$("status").value="Scheduled";$("ltype").value="Loaded";$("po").disabled=false;$("save").textContent="Add trailer";$("cancel").hidden=true}
 $("save").onclick=function(){
  var t=$("trailer").value.trim(),c=$("carrier").value.trim();
  if(!t||!c){alert("Enter a trailer / load # and a carrier.");return}
- var data={trailer:t,carrier:c,dir:$("dir").value,yard:$("yard").value.trim().toUpperCase(),door:$("door").value.trim().toUpperCase(),deliv:$("deliv").value,po:$("po").value.trim(),cmt:$("cmt").value.trim()};
+ var data={trailer:t,carrier:c,dir:$("dir").value,yard:$("yard").value.trim().toUpperCase(),door:$("door").value.trim().toUpperCase(),deliv:$("deliv").value,po:$("ltype").value==="Empty"?"":$("po").value.trim(),cmt:$("cmt").value.trim(),empty:$("ltype").value==="Empty"};
  var s=$("status").value;
  if(editId){var it=items.filter(function(i){return i.id===editId})[0];Object.assign(it,data);if(it.status!==s)setStatus(it,s)}
  else{var n=Object.assign({id:Date.now()+""+Math.floor(Math.random()*999),status:"Scheduled"},data);setStatus(n,s);items.unshift(n)}
  persist();clearForm();render()};
 $("cancel").onclick=clearForm;
-$("q").oninput=render;$("f").onchange=render;
+$("q").oninput=render;$("f").onchange=render;$("fc").onchange=render;$("fd1").onchange=render;$("fd2").onchange=render;
+$("fclr").onclick=function(){["q","f","fc","fd1","fd2"].forEach(function(k){$(k).value=""});render()};
 $("rows").onclick=function(e){
  var a=e.target.getAttribute("data-a");if(!a)return;
  var it=items.filter(function(i){return i.id===e.target.getAttribute("data-id")})[0];if(!it)return;
  if(a==="in"){setStatus(it,"In yard");if(!it.yard){var y=prompt("Yard location for "+it.trailer+"?");if(y)it.yard=y.trim().toUpperCase()}}
  else if(a==="door"){var d=prompt("Door location for "+it.trailer+"?",it.door||"");if(!d)return;it.door=d.trim().toUpperCase();setStatus(it,"At door")}
+ else if(a==="eout")setStatus(it,"Checked out");
  else if(a==="work")setStatus(it,"Loading/Unloading");
  else if(a==="done")setStatus(it,"Completed");
  else if(a==="out"){setStatus(it,"Checked out")}
@@ -283,8 +363,8 @@ $("rows").onclick=function(e){
  persist();render()};
 function toRows(){
  function dt(t){return t?new Date(t).toLocaleString():""}
- var head=["Trailer / Load #","Carrier","Direction","Yard Location","Door Location","Status","Check-in Time","Completion Time","Check-out Time","Delivery Date","PO Number","Comments","Added By","Added At","Last Updated By","Last Updated At"];
- return [head].concat(items.map(function(i){return[i.trailer,i.carrier,i.dir,i.yard||"",i.door||"",i.status,dt(i.checkIn),dt(i.completed),dt(i.checkOut),i.deliv||"",i.po||"",i.cmt||"",i.createdBy||"",dt(i.createdAt),i.updBy||"",dt(i.updAt)]}));
+ var head=["Trailer / Load #","Carrier","Direction","Yard Location","Door Location","Status","Check-in Time","Completion Time","Check-out Time","Delivery Date","PO Number","Comments","Load Type","Added By","Added At","Last Updated By","Last Updated At"];
+ return [head].concat(items.map(function(i){return[i.trailer,i.carrier,i.dir,i.yard||"",i.door||"",i.status,dt(i.checkIn),dt(i.completed),dt(i.checkOut),i.deliv||"",i.po||"",i.cmt||"",i.empty?"Empty":"Loaded",i.createdBy||"",dt(i.createdAt),i.updBy||"",dt(i.updAt)]}));
 }
 $("xl").onclick=async function(){
  if(!items.length){alert("Add at least one trailer before exporting.");return}
@@ -292,21 +372,21 @@ $("xl").onclick=async function(){
  try{dl=await claude.use("downloads")}catch(e){}
  if(dl&&window.XLSX){
   var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"]=[16,18,11,14,14,18,20,20,20,14,14,34,14,20,16,20].map(function(w){return{wch:w}});
+  ws["!cols"]=[16,18,11,14,14,18,20,20,20,14,14,34,12,14,20,16,20].map(function(w){return{wch:w}});
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Yard");
   if(checks.length){var cr=[["Check Date","Checked By","Location","Trailer","Carrier","Result","Note"]];
    checks.forEach(function(c){c.lines.forEach(function(l){cr.push([new Date(c.at).toLocaleString(),c.by,l.loc,l.trailer,l.carrier,RL[l.r||""],l.note||""])})});
    var w2=XLSX.utils.aoa_to_sheet(cr);w2["!cols"]=[20,16,12,16,22,12,24].map(function(w){return{wch:w}});XLSX.utils.book_append_sheet(wb,w2,"Yard Checks")}
   var buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});
-  try{await dl.save({filename:"yard-log-"+new Date().toISOString().slice(0,10)+".xlsx",data:buf})}
+  try{await dl.save({filename:"yard-log-"+SITE.KEY+"-"+new Date().toISOString().slice(0,10)+".xlsx",data:buf})}
   catch(e){if(e&&e.code!=="declined")alert("Could not save the file ("+(e.code||"error")+").")}
  }else{
   var tsv=rows.map(function(r){return r.join("\t")}).join("\n");
   try{await navigator.clipboard.writeText(tsv);alert("Downloads are unavailable here, so the table was copied. Paste it into Excel.")}
   catch(e){alert("Export is unavailable in this view.")}
  }};
-function editItem(it){editId=it.id;$("trailer").value=it.trailer;$("carrier").value=it.carrier;$("dir").value=it.dir;$("yard").value=it.yard||"";$("door").value=it.door||"";$("deliv").value=it.deliv||"";$("po").value=it.po||"";$("cmt").value=it.cmt||"";$("status").value=it.status;$("save").textContent="Save changes";$("cancel").hidden=false;window.scrollTo(0,0)}
-var LK="yardmgr.layout2",cfg={dn:65,ds:65,sn:20,ss:20},sel=null;
+function editItem(it){editId=it.id;$("trailer").value=it.trailer;$("carrier").value=it.carrier;$("dir").value=it.dir;$("yard").value=it.yard||"";$("door").value=it.door||"";$("deliv").value=it.deliv||"";$("po").value=it.po||"";$("ltype").value=it.empty?"Empty":"Loaded";$("po").disabled=!!it.empty;$("cmt").value=it.cmt||"";$("status").value=it.status;$("save").textContent="Save changes";$("cancel").hidden=false;window.scrollTo(0,0)}
+var LK=(SK+"layout2"),cfg={dn:65,ds:65,sn:20,ss:20},sel=null;
 try{var c0=JSON.parse(localStorage.getItem(LK)||"null");if(c0)cfg=c0}catch(e){}
 function ids(p,a,b){var o=[];for(var i=1;i<=a+b;i++)o.push(p+"-"+(i<10?"0":"")+i);return o}
 function doorIds(){return ids("D",cfg.dn,cfg.ds)}
@@ -319,9 +399,9 @@ function drawMap(){
  var g=geom(),per=g.per,W=g.W,cw=36,o=occ(),dI=doorIds(),sI=spotIds(),y=8,out="",wrap=$("mapwrap");
  if(zoomAuto&&wrap.clientWidth>0)zoom=Math.min(1,(wrap.clientWidth-18)/W);
  function slot(t,id,x,yy,w,h,it){
-  var fill=it?(over(it)?RED:"var("+COLORS[it.status]+")"):"#fff";
-  var st=(sel&&sel.id===id)?' stroke="#111" stroke-width="3"':(it?' stroke="rgba(0,0,0,.3)" stroke-width="1"':' stroke="#cfcfc8" stroke-width="1"');
-  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+")"+(it.po?", PO "+esc(it.po):"")+", "+it.status:" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="5" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+(it?h/2-2:h/2+4))+'" text-anchor="middle" font-size="'+(id.length>4?8.5:10)+'" font-weight="700" fill="'+(it?"#fff":"#8a8a84")+'">'+id+'</text>'+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+11)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">'+esc(String(it.trailer).slice(-6))+'</text>':"")+'</g>'}
+  var fill=it?(over(it)?RED:it.empty?"#7b8794":"var("+COLORS[it.status]+")"):"#fff";
+  var st=(sel&&sel.id===id)?' stroke="#111" stroke-width="3"':(it&&!it.empty&&tab!=="All"&&it.dir===tab?' stroke="#FFD400" stroke-width="3"':it?' stroke="rgba(0,0,0,.3)" stroke-width="1"':' stroke="#cfcfc8" stroke-width="1"');
+  return'<g class="slot" data-t="'+t+'" data-id="'+id+'"><title>'+id+(it?" - "+esc(it.trailer)+" ("+esc(it.carrier)+")"+(it.po?", PO "+esc(it.po):"")+", "+it.status+(it.empty?" (empty)":""):" - open")+'</title><rect x="'+x+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx="5" fill="'+fill+'"'+st+'/><text x="'+(x+w/2)+'" y="'+(yy+(it?h/2-2:h/2+4))+'" text-anchor="middle" font-size="'+(id.length>4?8.5:10)+'" font-weight="700" fill="'+(it?"#fff":"#8a8a84")+'">'+id+'</text>'+(it&&!it.empty?'<text x="'+(x+w-3)+'" y="'+(yy+8)+'" text-anchor="end" font-size="7" font-weight="700" fill="#fff" opacity=".9">'+({"Inbound":"I","Outbound":"O","Outbound STO":"S"}[it.dir]||"")+'</text>':"")+(it?'<text x="'+(x+w/2)+'" y="'+(yy+h/2+11)+'" text-anchor="middle" font-size="8" font-weight="600" fill="#fff">'+esc(String(it.trailer).slice(-6))+'</text>':"")+'</g>'}
  function place(list,t,w,h,map){
   var rows=Math.ceil(list.length/per),keep=out;out="";
   for(var i=0;i<list.length;i++){var r=Math.floor(i/per),c=i%per,n=Math.min(per,list.length-r*per),off=(W-28-(n*cw+Math.floor((n-1)/5)*8))/2;
@@ -335,13 +415,13 @@ function drawMap(){
  var dN=dI.slice(0,cfg.dn),dS=dI.slice(cfg.dn),sN=sI.slice(0,cfg.sn),sS=sI.slice(cfg.sn);
  if(sN.length){label("NORTH YARD  "+rng(sN),sN,o.y);place(sN,"y",32,56,o.y);y+=6}
  if(dN.length){label("NORTH DOORS  "+rng(dN),dN,o.d);place(dN,"d",32,32,o.d);y+=4}
- out+='<rect x="6" y="'+y+'" width="'+(W-12)+'" height="70" rx="8" fill="#1a1a1a"/><rect x="6" y="'+y+'" width="'+(W-12)+'" height="5" fill="#FFD400"/><text x="28" y="'+(y+40)+'" font-size="22" font-weight="800" letter-spacing="6" fill="#FFD400">WAREHOUSE</text><text x="28" y="'+(y+58)+'" font-size="12" fill="#cfcfcf">5300 Mountain Creek Pkwy</text>';
+ out+='<rect x="6" y="'+y+'" width="'+(W-12)+'" height="70" rx="8" fill="#1a1a1a"/><rect x="6" y="'+y+'" width="'+(W-12)+'" height="5" fill="#FFD400"/><text x="28" y="'+(y+40)+'" font-size="22" font-weight="800" letter-spacing="6" fill="#FFD400">WAREHOUSE</text><text x="28" y="'+(y+58)+'" font-size="12" fill="#cfcfcf">'+esc(SITE.NAME+" - "+SITE.ADDRESS.split(",")[0])+'</text>';
  y+=84;
  if(dS.length){label("SOUTH DOORS  "+rng(dS),dS,o.d);place(dS,"d",32,32,o.d);y+=6}
  if(sS.length){label("SOUTH YARD  "+rng(sS),sS,o.y);place(sS,"y",32,56,o.y)}
  var m=$("map");m.setAttribute("viewBox","0 0 "+W+" "+(y+6));m.style.width=Math.round(W*zoom)+"px";m.style.minWidth="0";m.innerHTML=out;
  $("zl").textContent="Zoom "+Math.round(zoom*100)+"%"+(zoomAuto?" (auto)":"");
- $("leg").innerHTML='<span><i style="background:#fff;border:1px solid #bdbdb6"></i>Open</span>'+STATUSES.slice(1,4).map(function(s){return'<span><i style="background:var('+COLORS[s]+')"></i>'+s+'</span>'}).join("")+'<span><i style="background:'+RED+'"></i>Over 24 hours on site</span>'}
+ $("leg").innerHTML='<span><i style="background:#fff;border:1px solid #bdbdb6"></i>Open</span>'+STATUSES.slice(1,4).map(function(s){return'<span><i style="background:var('+COLORS[s]+')"></i>'+s+'</span>'}).join("")+'<span><i style="background:#7b8794"></i>Empty trailer</span><span><i style="background:'+RED+'"></i>Over 24 hours on site</span><span>Corner letter: I inbound, O outbound, S outbound STO. Yellow outline = your team tab.</span>'}
 function setZoom(z){zoomAuto=false;zoom=Math.max(.3,Math.min(2.5,z));drawMap()}
 $("zout").onclick=function(){setZoom(zoom-.15)};$("zin").onclick=function(){setZoom(zoom+.15)};$("z1").onclick=function(){setZoom(1)};
 $("zfit").onclick=function(){zoomAuto=true;drawMap()};
@@ -357,17 +437,17 @@ function renderSel(){
  if(!sel){el.innerHTML='<span class="note">Scroll the map sideways, then click a door or yard spot to see what is there or assign a trailer.</span>';return}
  var o=occ(),isD=sel.t==="d",it=(isD?o.d:o.y)[sel.id],h="<b>"+(isD?"Door ":"Yard spot ")+sel.id+"</b>";
  if(it){
-  h+=tagH(it)+"<span>"+esc(it.trailer)+", "+esc(it.carrier)+(it.po?", PO "+esc(it.po):"")+", delivery "+fmtDate(it.deliv)+"</span>"+(it.cmt?'<span class="note" style="flex:1 1 100%;margin:0">Comments: '+esc(it.cmt)+"</span>":"");
+  h+=tagH(it)+"<span>"+esc(it.trailer)+", "+esc(it.carrier)+(it.po?", PO "+esc(it.po):"")+(it.empty?"":", delivery "+fmtDate(it.deliv))+"</span>"+(it.cmt?'<span class="note" style="flex:1 1 100%;margin:0">Comments: '+esc(it.cmt)+"</span>":"");
   if(isD){var nx={"At door":["work","Start work"],"Loading/Unloading":["done","Complete"]}[it.status];if(nx)h+='<button class="p" data-s="'+nx[0]+'" data-id="'+it.id+'">'+nx[1]+"</button>"}
-  else{var od=doorIds().filter(function(d){return!o.d[d]});h+='<select id="od">'+od.map(function(d){return"<option>"+d+"</option>"}).join("")+'</select><button class="p" data-s="tod" data-id="'+it.id+'">Send to door</button>'}
+  else if(it.empty){h+='<button class="p" data-s="eout" data-id="'+it.id+'">Check out empty</button>'}else{var od=doorIds().filter(function(d){return!o.d[d]});h+='<select id="od">'+od.map(function(d){return"<option>"+d+"</option>"}).join("")+'</select><button class="p" data-s="tod" data-id="'+it.id+'">Send to door</button>'}
   h+='<button data-s="edit" data-id="'+it.id+'">Edit details</button>'}
  else{
-  var c=items.filter(function(i){return i.status==="Scheduled"||i.status==="In yard"});
+  var c=items.filter(function(i){return(i.status==="Scheduled"||i.status==="In yard")&&(sel.t==="y"||!i.empty)});
   h+="<span>is open.</span>";
   if(c.length)h+='<select id="pk">'+c.map(function(i){return'<option value="'+i.id+'">'+esc(i.trailer)+" - "+esc(i.carrier)+" ("+i.status+")</option>"}).join("")+'</select><button class="p" data-s="asg">Assign here</button>';
   h+='<button data-s="newt">New trailer here</button>'}
  el.innerHTML=h}
-function render(){renderTable();drawMap();renderSel();renderChk();renderLog()}
+function render(){renderTable();drawMap();renderSel();renderChk();renderLog();renderEmpty();renderTabs();renderMsgs()}
 function byId(id){return items.filter(function(i){return i.id===id})[0]}
 $("map").onclick=function(e){var g=e.target.closest?e.target.closest(".slot"):null;if(!g)return;sel={t:g.getAttribute("data-t"),id:g.getAttribute("data-id")};drawMap();renderSel()};
 $("sel").onclick=function(e){
@@ -380,13 +460,13 @@ $("sel").onclick=function(e){
  else if(a==="edit"){editItem(it);return}
  persist();render()};
 $("capply").onclick=function(){
- if(lock&&!unl()){alert("The layout is locked.");return}
+ if(PROFILE?PROFILE.role!=="admin":(lock&&!unl())){alert(PROFILE?"Only the admin can change the layout.":"The layout is locked.");return}
  function v(i,m){var n=parseInt($(i).value,10);return isNaN(n)?0:Math.max(0,Math.min(m,n))}
  cfg={dn:v("cdn",200),ds:v("cds",200),sn:v("csn",120),ss:v("css",120),rl:v("crl",200)};
  saveCfg();
  sel=null;lists();render()};
 $("cdn").value=cfg.dn;$("cds").value=cfg.ds;$("csn").value=cfg.sn;$("css").value=cfg.ss;$("crl").value=cfg.rl||0;lists();
-var CK="yardmgr.checks",CC="yardmgr.chk",RL={ok:"OK",wrong:"Wrong spot",missing:"Not found","":"Not checked"};
+var CK=(SK+"checks"),CC=(SK+"chk"),RL={ok:"OK",wrong:"Wrong spot",missing:"Not found","":"Not checked"};
 function jl(k,d){try{return JSON.parse(localStorage.getItem(k)||"null")||d}catch(e){return d}}
 function js(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var checks=jl(CK,[]),chk=jl(CC,null);
@@ -434,12 +514,12 @@ $("chkbody").onclick=function(e){
 function saveCheck(c){if(DB){DB.doc("checks/c"+Date.parse(c.at)).set(c).catch(function(e){setSync("Could not save the check ("+(e&&e.code||"error")+").",true)})}else js(CK,checks.slice(0,90))}
 function saveCfg(){if(DB){DB.doc("config/layout").set(cfg).catch(function(e){setSync("Could not save the layout ("+(e&&e.code||"error")+").",true)})}else{try{localStorage.setItem(LK,JSON.stringify(cfg))}catch(e){}}}
 var migrated=false;
-(async function(){
+async function startDB(){
  var c=null;try{c=await claude.use("db")}catch(e){}
  if(!c){setSync("Saving on this computer only. Add your Supabase details to config.js to share data between computers.",true);return}
  try{var u=await claude.use("user");if(u&&(await u.can("data.write"))===false)setSync("View only: you can see the yard but not change it.",true)}catch(e){}
- DB=c;setSync("Shared across computers: connecting...");
- var bad=function(e){DB=null;setSync("Shared storage unavailable ("+(e&&e.code||"error")+"). Saving on this computer only.",true)};
+ DB=scoped(c);setSync("Shared across computers: connecting...");
+ var bad=function(e){if(e&&e.code==="http_401"&&window.YardAuth&&YardAuth.on){YardAuth.logout().then(function(){location.reload()});return}DB=null;setSync("Shared storage unavailable ("+(e&&e.code||"error")+"). Saving on this computer only.",true)};
  DB.collection("trailers").onSnapshot(function(sn){
   if(!sn.metadata.fromCache&&!migrated){migrated=true;
    var loc=jl(KEY,[]);
@@ -453,16 +533,19 @@ var migrated=false;
   checks=sn.docs.map(function(d){return Object.assign({},d.data())}).sort(function(a,b){return a.at<b.at?1:-1});render()},bad);
  DB.doc("config/layout").onSnapshot(function(sn){
   if(sn.exists){cfg=Object.assign({},sn.data());$("cdn").value=cfg.dn;$("cds").value=cfg.ds;$("csn").value=cfg.sn;$("css").value=cfg.ss;$("crl").value=cfg.rl||0;lists();render()}},bad);
-DB.collection("log",{limit:100}).onSnapshot(function(sn){
+DB.raw.collection("messages",{limit:100,every:15000}).onSnapshot(function(sn){
+  msgs=sn.docs.map(function(d){return Object.assign({},d.data())}).filter(function(m){return m.from===SITE.KEY||m.to===SITE.KEY}).sort(function(a,b){return a.at<b.at?1:-1});renderMsgs()},bad);
+ DB.collection("log",{limit:100}).onSnapshot(function(sn){
   logs=sn.docs.map(function(d){return Object.assign({},d.data())}).sort(function(a,b){return a.at<b.at?1:-1});renderLog()},bad);
  DB.doc("config/lock").onSnapshot(function(sn){lock=sn.exists?Object.assign({},sn.data()):null;renderLock()},bad);
-})();
-var LOCKK="yardmgr.lock",lock=jl(LOCKK,null),chg=false,unlMem=false;
-function unl(v){try{if(v===undefined)return sessionStorage.getItem("yardmgr.unl")==="1";if(v)sessionStorage.setItem("yardmgr.unl","1");else sessionStorage.removeItem("yardmgr.unl")}catch(e){if(v===undefined)return unlMem;unlMem=v}return v}
+}
+var LOCKK=(SK+"lock"),lock=jl(LOCKK,null),chg=false,unlMem=false;
+function unl(v){try{if(v===undefined)return sessionStorage.getItem((SK+"unl"))==="1";if(v)sessionStorage.setItem((SK+"unl"),"1");else sessionStorage.removeItem((SK+"unl"))}catch(e){if(v===undefined)return unlMem;unlMem=v}return v}
 function hex(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return("0"+x.toString(16)).slice(-2)}).join("")}
 function hashPw(pw,salt){if(!(window.crypto&&crypto.subtle))return Promise.reject(new Error("nocrypto"));return crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+":"+pw)).then(hex)}
 function saveLock(l){lock=l;if(DB){DB.doc("config/lock").set(l).catch(function(e){setSync("Could not save the password ("+(e&&e.code||"error")+").",true)})}else{try{localStorage.setItem(LOCKK,JSON.stringify(l))}catch(e){}}}
 function renderLock(){
+ if(PROFILE){var A=PROFILE.role==="admin";["cdn","cds","csn","css","crl","capply"].forEach(function(k){$(k).disabled=!A});$("lockrow").style.display="";$("lpw").style.display="none";$("lpw2").style.display="none";$("lockbtns").innerHTML="";$("lockst").textContent=A?"You are the admin, so you can change the layout.":"Only the admin can change the layout.";return}
  var L=!!lock,U=L&&unl(),edit=!L||chg||(L&&!U);
  ["cdn","cds","csn","css","crl","capply"].forEach(function(k){$(k).disabled=L&&!U});
  $("lockst").textContent=!L?"Layout is not locked. When your layout is finished, set a password to protect it.":(U?(chg?"Enter a new password.":"Layout is unlocked on this computer. Lock it again when you are done."):"Layout is locked. Enter the password to change it.");
@@ -484,11 +567,149 @@ $("lockrow").onclick=function(e){
  else if(k==="relock"){unl(false);renderLock()}
  else if(k==="change"){chg=true;renderLock()}
  else if(k==="cancel"){chg=false;clr();renderLock()}};
-$("who").onclick=function(){var n=prompt("Your name:",me);if(n&&n.trim()){me=n.trim();try{localStorage.setItem("yardmgr.me",me)}catch(e){}renderWho()}};
-load();items.forEach(function(i){shadow[i.id]=JSON.stringify(i)});render();renderWho();renderLock();if(!me)setTimeout(ensureMe,500);
+var TABS=["All","Inbound","Outbound","Outbound STO"],tab=(function(){try{return localStorage.getItem((SK+"tab"))||"All"}catch(e){return"All"}})();
+if(TABS.indexOf(tab)<0)tab="All";
+function inTab(i){return tab==="All"||i.dir===tab}
+function renderTabs(){var c={};TABS.forEach(function(t){c[t]=items.filter(function(i){return!i.empty&&i.status!=="Checked out"&&(t==="All"||i.dir===t)}).length});
+ $("tabs").innerHTML=TABS.map(function(t){return'<button data-t="'+t+'" class="'+(t===tab?"on":"")+'">'+t+' <span class="cnt">'+c[t]+"</span></button>"}).join("")}
+$("tabs").onclick=function(e){var b=e.target.closest("button");if(!b)return;tab=b.getAttribute("data-t");try{localStorage.setItem((SK+"tab"),tab)}catch(x){}render()};
+var msgs=[];
+function vis(m){return tab==="All"||!m.team||m.team==="All teams"||m.team===tab}
+function renderMsgs(){
+ var el=$("msgrows");if(!el)return;
+ var on=!!DB;
+ $("msgnote").textContent=on?"These messages go to "+SITE.OTHER_NAME+" and are visible only to the two sites.":"Messaging needs the shared database. Add your Supabase details to config.js.";
+ ["mteam","mtr","mtxt","msend","mrall"].forEach(function(k){$(k).disabled=!on});
+ $("mto").value=SITE.OTHER_NAME;
+ var list=msgs.filter(vis),unread=msgs.filter(function(m){return m.to===SITE.KEY&&!m.readAt&&vis(m)}).length;
+ $("msgbadge").textContent=unread?unread+" new":"";
+ $("msgbtn").textContent=unread?"Messages ("+unread+")":"Messages";
+ document.title=(unread?"("+unread+") ":"")+"Yard Manager - "+SITE.NAME;
+ var sl=$("mtr"),cur=sl.value;
+ sl.innerHTML='<option value="">None</option>'+items.filter(function(i){return!i.empty&&i.status!=="Checked out"}).map(function(i){return'<option value="'+i.id+'">'+esc(i.trailer)+(i.po?" / "+esc(i.po):"")+" ("+esc(i.carrier)+")</option>"}).join("");sl.value=cur;
+ el.innerHTML=list.length?list.slice(0,60).map(function(m){var mine=m.from===SITE.KEY,un=!mine&&!m.readAt;
+  return'<tr class="'+(un?"unread":"")+'"><td>'+fmt(m.at)+'<div class="note" style="margin:0">'+(mine?(m.readAt?"Read by "+esc(m.readBy||"")+" "+fmt(m.readAt):"Not read yet"):"")+"</div></td><td>"+(mine?"You, to "+esc(m.toName):esc(m.fromName))+' <div class="note" style="margin:0">'+esc(m.by||"")+"</div></td><td>"+esc(m.team||"All teams")+'</td><td style="white-space:normal;max-width:320px">'+esc(m.text)+"</td><td>"+
+  (m.tr?esc(m.tr.trailer)+(m.tr.po?" / "+esc(m.tr.po):"")+" ("+esc(m.tr.carrier)+")"+'<div class="note" style="margin:0">'+esc(m.tr.dir||"")+", "+esc(m.tr.status||"")+(m.tr.loc?" at "+esc(m.tr.loc):"")+"</div>":"-")+
+  '</td><td><div class="act">'+(un?'<button data-m="read" data-id="'+m.id+'">Mark read</button>':"")+(mine?"":'<button data-m="reply" data-id="'+m.id+'">Reply</button>')+"</div></td></tr>"}).join(""):'<tr><td colspan="6" class="empty">No messages yet.</td></tr>'}
+function saveMsg(m){if(DB)DB.raw.doc("messages/"+m.id).set(m).catch(function(e){setSync("Could not save the message ("+(e&&e.code||"error")+").",true)})}
+$("msgbtn").onclick=function(){$("msgp").scrollIntoView({behavior:"smooth"})};
+$("msend").onclick=function(){
+ if(!DB){alert("Messaging needs the shared database.");return}
+ var t=$("mtxt").value.trim();if(!t){alert("Type a message first.");return}
+ ensureMe();var tr=byId($("mtr").value);
+ var m={id:"m"+Date.now()+Math.floor(Math.random()*9000+1000),at:new Date().toISOString(),from:SITE.KEY,fromName:SITE.NAME,to:SITE.OTHER_KEY,toName:SITE.OTHER_NAME,by:me,team:$("mteam").value,text:t,
+  tr:tr?{trailer:tr.trailer,po:tr.po||"",carrier:tr.carrier,status:tr.status,dir:tr.dir,loc:tr.status==="In yard"?(tr.yard||""):(tr.door||tr.yard||"")}:null,readAt:null,readBy:null};
+ msgs.unshift(m);saveMsg(m);$("mtxt").value="";$("mtr").value="";renderMsgs()};
+$("mtxt").onkeydown=function(e){if(e.key==="Enter")$("msend").click()};
+$("mrall").onclick=function(){ensureMe();msgs.forEach(function(m){if(m.to===SITE.KEY&&!m.readAt){m.readAt=new Date().toISOString();m.readBy=me;saveMsg(m)}});renderMsgs()};
+$("msgrows").onclick=function(e){
+ var a=e.target.getAttribute("data-m");if(!a)return;
+ var m=msgs.filter(function(x){return x.id===e.target.getAttribute("data-id")})[0];if(!m)return;
+ if(a==="read"){ensureMe();m.readAt=new Date().toISOString();m.readBy=me;saveMsg(m);renderMsgs()}
+ else if(a==="reply"){$("mteam").value=m.team||"All teams";$("mtxt").value="Re: ";$("mtxt").focus();window.scrollTo(0,$("msgp").getBoundingClientRect().top+window.scrollY-20)}};
+function renderEmpty(){
+ var el=$("erows");if(!el)return;
+ var list=items.filter(function(i){return i.empty&&i.status!=="Checked out"}).sort(function(a,b){return String(a.yard||"").localeCompare(String(b.yard||""),undefined,{numeric:true})});
+ el.innerHTML=list.length?list.map(function(i){var d=i.checkIn?Math.floor((Date.now()-new Date(i.checkIn).getTime())/864e5):null;
+  return"<tr><td class=loc>"+esc(i.trailer)+"</td><td>"+esc(i.carrier)+"</td><td class=loc>"+esc(i.yard||"No spot")+"</td><td>"+fmt(i.checkIn)+"</td><td>"+(d===null?"-":d+"d")+'</td><td style="white-space:normal;max-width:260px">'+esc(i.cmt||"-")+"</td><td>"+(i.updBy?esc(i.updBy):"-")+'</td><td><div class="act"><button data-e="move" data-id="'+i.id+'">Move</button><button data-e="out" data-id="'+i.id+'">Check out</button><button data-e="edit" data-id="'+i.id+'">Edit</button><button data-e="del" data-id="'+i.id+'">Delete</button></div></td></tr>'}).join(""):'<tr><td colspan="8" class="empty">No empty trailers in the yard.</td></tr>'}
+function spotCheck(sp,selfId){
+ if(!sp)return true;
+ if(spotIds().indexOf(sp)<0&&!confirm(sp+" is not in your yard layout, so it will not show on the map. Use it anyway?"))return false;
+ var o=occ().y[sp];
+ if(o&&o.id!==selfId&&!confirm(sp+" already has "+o.trailer+". Put this trailer there too?"))return false;
+ return true}
+$("ltype").onchange=function(){var em=this.value==="Empty";$("po").disabled=em;if(em)$("po").value=""};
+$("eadd").onclick=function(){
+ var t=$("et").value.trim(),c=$("ec").value.trim(),y=$("ey").value.trim().toUpperCase(),m=$("ecm").value.trim();
+ if(!t){alert("Enter the trailer number.");return}
+ if(items.some(function(i){return i.status!=="Checked out"&&String(i.trailer).toLowerCase()===t.toLowerCase()})&&!confirm(t+" is already on site. Add it again?"))return;
+ if(!spotCheck(y,null))return;
+ var n={id:Date.now()+""+Math.floor(Math.random()*999),trailer:t,carrier:c||"-",dir:"Inbound",yard:y,door:"",deliv:"",po:"",cmt:m,empty:true,status:"Scheduled"};
+ setStatus(n,"In yard");items.unshift(n);persist();["et","ec","ey","ecm"].forEach(function(k){$(k).value=""});render()};
+$("erows").onclick=function(e){
+ var a=e.target.getAttribute("data-e");if(!a)return;var it=byId(e.target.getAttribute("data-id"));if(!it)return;
+ if(a==="move"){var y=prompt("Move "+it.trailer+" to which yard spot? For example Y-22",it.yard||"");if(y===null)return;y=y.trim().toUpperCase();if(!spotCheck(y,it.id))return;it.yard=y}
+ else if(a==="out"){setStatus(it,"Checked out")}
+ else if(a==="edit"){editItem(it);return}
+ else if(a==="del"){if(!confirm("Delete "+it.trailer+"?"))return;items=items.filter(function(i){return i!==it})}
+ persist();render()};
+var PROFILE=null,amode="login",started=false,PEOPLE=[];
+function siteName(k){return k===SITE.KEY?SITE.NAME:k===SITE.OTHER_KEY?SITE.OTHER_NAME:(k||"no site")}
+function authMsg(t,bad){var m=$("authmsg");m.textContent=t||"";m.className="note"+(bad?" bad":"")}
+function authShow(mode,msg,bad){
+ amode=mode;$("auth").hidden=false;var wait=mode==="wait";
+ $("authform").hidden=wait;$("authwait").hidden=!wait;
+ $("authh").textContent={login:"Sign in",signup:"Create your account",setpw:"Set a new password",wait:"Almost there"}[mode];
+ $("lname").hidden=mode!=="signup";$("lemail").hidden=mode==="setpw";$("lpass2").hidden=!(mode==="signup"||mode==="setpw");
+ $("apass").autocomplete=mode==="login"?"current-password":"new-password";
+ $("abtn").textContent={login:"Sign in",signup:"Create account",setpw:"Save password"}[mode]||"";
+ $("amode").textContent=mode==="signup"?"I already have an account":"Create an account";$("amode").hidden=mode==="setpw";$("aforgot").hidden=mode!=="login";
+ authMsg(msg,bad)}
+function signOut(){YardAuth.logout().then(function(){location.reload()})}
+async function afterLogin(){
+ var pr=null;
+ try{pr=await YardAuth.profile()}catch(e){authShow("wait","Could not read your account ("+(e.code||"error")+"). The database setup may not be finished. Ask the admin.",1);return}
+ if(!pr){authShow("wait","Your account has no profile yet. Ask the admin.",1);return}
+ if(pr.role==="pending"){authShow("wait","Thanks, "+(pr.name||pr.email)+". Your account is waiting for the admin to approve it. Press Check again after you have been approved.");return}
+ if(pr.role!=="admin"&&pr.role!=="user"){authShow("wait","This account has been turned off. Ask the admin if you need access.",1);return}
+ if(pr.role!=="admin"&&pr.site!==SITE.KEY){authShow("wait","Your account is set up for "+siteName(pr.site)+". Open that site's address to sign in there.",1);return}
+ PROFILE=pr;me=pr.name||pr.email;try{localStorage.setItem((SK+"me"),me)}catch(e){}
+ if(pr.role!=="admin"&&pr.team&&TABS.indexOf(pr.team)>-1)tab=pr.team;
+ $("auth").hidden=true;document.body.classList.remove("authpending");
+ if(pr.role==="admin"){$("adminp").hidden=false;loadPeople()}
+ renderWho();renderLock();render();
+ if(!started){started=true;startDB()}}
+async function authGo(){
+ var email=$("aemail").value.trim(),pw=$("apass").value;
+ try{
+  if(amode==="login"){if(!email||!pw){authMsg("Enter your email and password.",1);return}await YardAuth.login(email,pw);await afterLogin()}
+  else if(amode==="signup"){var nm=$("aname").value.trim();
+   if(!nm||!email){authMsg("Enter your name and email.",1);return}
+   if(pw.length<8){authMsg("Use at least 8 characters for the password.",1);return}
+   if(pw!==$("apass2").value){authMsg("The two passwords do not match.",1);return}
+   var r=await YardAuth.signup(email,pw,nm);
+   if(r.signedIn)await afterLogin();else authShow("login","Account created. If you were sent an email, confirm it first. Then sign in.")}
+  else if(amode==="setpw"){
+   if(pw.length<8){authMsg("Use at least 8 characters for the password.",1);return}
+   if(pw!==$("apass2").value){authMsg("The two passwords do not match.",1);return}
+   await YardAuth.setPassword(pw);$("apass").value="";$("apass2").value="";await afterLogin()}
+ }catch(e){authMsg(e.message||"Something went wrong.",1)}}
+$("abtn").onclick=authGo;
+["aemail","apass","apass2","aname"].forEach(function(k){$(k).onkeydown=function(e){if(e.key==="Enter")authGo()}});
+$("amode").onclick=function(){authShow(amode==="signup"?"login":"signup")};
+$("aforgot").onclick=async function(){var em=$("aemail").value.trim();if(!em){authMsg("Type your email above first.",1);return}
+ try{await YardAuth.recover(em);authMsg("If that email has an account, a reset link is on its way.")}catch(e){authMsg(e.message||"Could not send the email.",1)}};
+$("acheck").onclick=afterLogin;$("aout").onclick=signOut;
+async function gate(){
+ if(!(window.YardAuth&&YardAuth.on)){document.body.classList.remove("authpending");startDB();return}
+ try{if(await YardAuth.recoveryFromHash()){authShow("setpw","Choose a new password.");return}}catch(e){}
+ var u=null;try{u=await YardAuth.restore()}catch(e){}
+ if(!u){authShow("login");return}
+ afterLogin()}
+async function loadPeople(){
+ try{PEOPLE=await YardAuth.profiles()}catch(e){$("admrows").innerHTML='<tr><td colspan="6" class="empty">Could not load people ('+esc(e.code||"error")+")</td></tr>";return}
+ renderPeople()}
+function opt(list,sel){return list.map(function(v){var val=Array.isArray(v)?v[0]:v,lab=Array.isArray(v)?v[1]:v;return'<option value="'+esc(val)+'"'+(sel===val?" selected":"")+">"+esc(lab)+"</option>"}).join("")}
+function renderPeople(){
+ var pend=PEOPLE.filter(function(p){return p.role==="pending"}).length;$("admbadge").textContent=pend?pend+" waiting":"";
+ $("admrows").innerHTML=PEOPLE.length?PEOPLE.map(function(p){var self=PROFILE&&p.id===PROFILE.id,d='data-id="'+p.id+'"';
+  return'<tr class="'+(p.role==="pending"?"unread":"")+'"><td><input data-f="name" '+d+' value="'+esc(p.name||"")+'" style="width:150px"></td><td>'+esc(p.email||"")+'</td>'+
+  '<td><select data-f="site" '+d+'><option value="">Not set</option>'+opt([[SITE.KEY,SITE.NAME],[SITE.OTHER_KEY,SITE.OTHER_NAME]],p.site)+"</select></td>"+
+  '<td><select data-f="team" '+d+">"+opt(TABS,p.team||"All")+"</select></td>"+
+  '<td><select data-f="role" '+d+(self?" disabled":"")+">"+opt(["pending","user","admin","disabled"],p.role)+'</select></td><td><button class="p" data-a="saveuser" '+d+">Save</button></td></tr>"}).join(""):'<tr><td colspan="6" class="empty">No people yet.</td></tr>'}
+$("admrows").onclick=async function(e){
+ if(e.target.getAttribute("data-a")!=="saveuser")return;
+ var tr=e.target.closest("tr"),g=function(f){return tr.querySelector('[data-f="'+f+'"]').value},patch={name:g("name").trim(),site:g("site")||null,team:g("team"),role:g("role")};
+ if(patch.role==="user"&&!patch.site){alert("Choose a site for this person first.");return}
+ try{await YardAuth.updateProfile(e.target.getAttribute("data-id"),patch);await loadPeople()}catch(er){alert("Could not save ("+(er.code||"error")+").")}};
+$("admref").onclick=loadPeople;
+$("who").onclick=function(){if(PROFILE){if(confirm("Sign out of "+me+"?"))signOut();return}var n=prompt("Your name:",me);if(n&&n.trim()){me=n.trim();try{localStorage.setItem((SK+"me"),me)}catch(e){}renderWho()}};
+load();items.forEach(function(i){shadow[i.id]=JSON.stringify(i)});$("subtxt").textContent=SITE.NAME+" yard, "+SITE.ADDRESS+". Every trailer from gate to dock to departure.";$("sitepill").textContent=SITE.NAME;document.title="Yard Manager - "+SITE.NAME;
+render();renderWho();renderLock();if(!me&&!(window.YardAuth&&YardAuth.on))setTimeout(ensureMe,500);
+gate();
 setInterval(function(){renderTable();drawMap()},60000);
 setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
- var used=editId||["trailer","carrier","yard","door","deliv","po","cmt"].some(function(k){return $(k).value});
+ var used=editId||["trailer","carrier","yard","door","deliv","po","cmt","et","ec","ey","ecm","q","f","fc","fd1","fd2"].some(function(k){return $(k).value});
  if(!t&&!used)location.reload()},300000);
 </script>
 </body>
