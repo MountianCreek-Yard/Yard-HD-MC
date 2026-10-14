@@ -1,4 +1,4 @@
-// Copyright (c) 2026 [David Kerr]. All rights reserved.
+// Copyright (c) 2026 David Kerr. All rights reserved.
 // Storage and sign-in layer for the yard system.
 // With Supabase details in config.js, people must sign in and data is shared between computers.
 // Without them, the page saves to this browser only (no sign-in).
@@ -161,7 +161,7 @@
   }
 
   window.YardAuth = Auth;
-  window.claude = {
+  window.yardHost = {
     use: function (name) {
       if (name === "downloads") return Promise.resolve({ save: saveFile });
       if (name === "user") return Promise.resolve({ can: function () { return Promise.resolve(true); } });
