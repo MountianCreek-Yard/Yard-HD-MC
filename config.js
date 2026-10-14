@@ -1,4 +1,4 @@
-// Copyright (c) 2026 [David Kerr]. All rights reserved.
+// Copyright (c) 2026 David Kerr. All rights reserved.
 // Settings for the yard system. One website serves every location.
 window.YARD_CONFIG = {
   SUPABASE_URL: "https://znlxxyepjfconvudvxil.supabase.co",
