@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Copyright (c) 2026 [David Kerr]. All rights reserved. Unauthorized copying, reuse or distribution is prohibited. -->
+<!-- Copyright (c) 2026 David Kerr. All rights reserved. Unauthorized copying, reuse or distribution is prohibited. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Yard Manager</title>
-<meta name="copyright" content="Copyright 2026 [YOUR NAME]. All rights reserved.">
+<meta name="copyright" content="Copyright 2026 David Kerr. All rights reserved.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%9A%9B%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
@@ -392,7 +392,7 @@ function toRows(){
 $("xl").onclick=async function(){
  if(!items.length){alert("Add at least one trailer before exporting.");return}
  var rows=toRows(),dl=null;
- try{dl=await claude.use("downloads")}catch(e){}
+ try{dl=await yardHost.use("downloads")}catch(e){}
  if(dl&&window.XLSX){
   var ws=XLSX.utils.aoa_to_sheet(rows);
   ws["!cols"]=[16,18,11,14,14,18,20,20,20,14,14,34,12,14,20,16,20].map(function(w){return{wch:w}});
@@ -538,9 +538,9 @@ function saveCheck(c){if(DB){DB.doc("checks/c"+Date.parse(c.at)).set(c).catch(fu
 function saveCfg(){if(DB){DB.doc("config/layout").set(cfg).catch(function(e){setSync("Could not save the layout ("+(e&&e.code||"error")+").",true)})}else{try{localStorage.setItem(LK,JSON.stringify(cfg))}catch(e){}}}
 var migrated=false;
 async function startDB(){
- var c=null;try{c=await claude.use("db")}catch(e){}
+ var c=null;try{c=await yardHost.use("db")}catch(e){}
  if(!c){setSync("Saving on this computer only. Add your Supabase details to config.js to share data between computers.",true);return}
- try{var u=await claude.use("user");if(u&&(await u.can("data.write"))===false)setSync("View only: you can see the yard but not change it.",true)}catch(e){}
+ try{var u=await yardHost.use("user");if(u&&(await u.can("data.write"))===false)setSync("View only: you can see the yard but not change it.",true)}catch(e){}
  DB=scoped(c);setSync("Shared across computers: connecting...");
  var bad=function(e){if(e&&e.code==="http_401"&&window.YardAuth&&YardAuth.on){YardAuth.logout().then(function(){location.reload()});return}DB=null;setSync("Shared storage unavailable ("+(e&&e.code||"error")+"). Saving on this computer only.",true)};
  DB.collection("trailers").onSnapshot(function(sn){
@@ -759,4 +759,3 @@ setInterval(function(){var a=document.activeElement,t=a&&/^(INPUT|SELECT|TEXTARE
  var used=editId||["trailer","carrier","yard","door","deliv","po","cmt","et","ec","ey","ecm","q","f","fc","fd1","fd2"].some(function(k){return $(k).value});
  if(!t&&!used)location.reload()},300000);
 </script>
-</body>
